@@ -68,7 +68,7 @@ public interface OrderDao {
       void insertOrderItem(OrderItem orderItem);
    
    @Update("UPDATE orderItem SET count=#{count} WHERE oiid=#{oiid}")
-   void updateOrderItemCount(@Param("oiid") int oiid, @Param("count") int count);
+   void updateOrderItemCount(int oiid, int count);
 
          
 }
