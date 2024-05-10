@@ -15,7 +15,7 @@ import lombok.ToString;
 @ToString
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder   // 원하는 데이터만 골라서 처리 하겠다........
+@Builder   // 원하는 데이터만 골라서 처리 하겠다..................
 
 public class Order {
 	private int oid;         
