@@ -18,6 +18,7 @@ import UserUpdate from './pages/UserUpdate';
 import Kakao from './api/kakao';
 import WishItemList from './pages/WishItemList';
 import Statistics from "./components/Statistics"; // 수정된 import 문
+import DeveloperPage from "./pages/DeveloperPage";
 
 const router = createBrowserRouter([
   {
@@ -39,6 +40,7 @@ const router = createBrowserRouter([
       { path: 'userUpdate', element: <UserUpdate/> },
       { path: 'callback/kakaotalk', element: <Kakao/> },
       { path: 'wish/list', element: <WishItemList/> },
+      {path: 'DeveloperPage',  element: <DeveloperPage/>}
     ]
   }
 ]);
