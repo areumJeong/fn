@@ -19,6 +19,7 @@ import Kakao from './api/kakao';
 import WishItemList from './pages/WishItemList';
 import Statistics from "./components/Statistics"; // 수정된 import 문
 import DeveloperPage from "./pages/DeveloperPage";
+import RealTime from "./pages/RealTime";
 
 const router = createBrowserRouter([
   {
