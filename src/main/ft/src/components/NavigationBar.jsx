@@ -1,38 +1,37 @@
 import React from 'react';
-import { styled, alpha } from '@mui/material/styles';
-import AppBar from '@mui/material/AppBar';
-import Box from '@mui/material/Box';
-import Toolbar from '@mui/material/Toolbar';
-import IconButton from '@mui/material/IconButton';
-import Typography from '@mui/material/Typography';
-import InputBase from '@mui/material/InputBase';
-import Badge from '@mui/material/Badge';
-import MenuIcon from '@mui/icons-material/Menu';
-import SearchIcon from '@mui/icons-material/Search';
-import AccountCircle from '@mui/icons-material/AccountCircle';
-import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
-import Drawer from '@mui/material/Drawer';
-import Button from '@mui/material/Button';
-import List from '@mui/material/List';
-import Divider from '@mui/material/Divider';
-import ListItem from '@mui/material/ListItem';
-import ListItemButton from '@mui/material/ListItemButton';
-import ListItemIcon from '@mui/material/ListItemIcon';
-import ListItemText from '@mui/material/ListItemText';
-import ListIcon from '@mui/icons-material/List';
-import WhatshotIcon from '@mui/icons-material/Whatshot';
-
-import LoginIcon from '@mui/icons-material/Login'; // login icon
-import LogoutIcon from '@mui/icons-material/Logout'; // logout icon
-import PersonAddIcon from '@mui/icons-material/PersonAdd'; // signUp
-
-
-import { Link } from 'react-router-dom';
-import '../css/nav.css';
-import { ExpandLess, ExpandMore } from '@mui/icons-material';
-import { Collapse } from '@mui/material';
-import { useNavigate } from 'react-router-dom'; // useNavigate 추가
+import { styled, alpha, AppBar, Box, Toolbar, IconButton, Typography, InputBase, Badge, Drawer, Button, List, Divider, ListItem, ListItemButton, ListItemIcon, ListItemText, Collapse, Stack } from '@mui/material';
+import {
+  Menu as MenuIcon,
+  Search as SearchIcon,
+  ShoppingCart as ShoppingCartIcon,
+  List as ListIcon,
+  Whatshot as WhatshotIcon,
+  Login as LoginIcon,
+  Logout as LogoutIcon,
+  PersonAdd as PersonAddIcon,
+  Favorite as FavoriteIcon,
+  ExpandLess,
+  ExpandMore,
+  AssignmentInd as AssignmentIndIcon
+} from '@mui/icons-material';
+import AccountCircleIcon from '@mui/icons-material/AccountCircle';
+import StorageIcon from '@mui/icons-material/Storage';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuthContext } from "../context/AuthContext";
+import '../css/nav.css';
+import WeekendIcon from '@mui/icons-material/Weekend';
+import DeskIcon from '@mui/icons-material/Desk';
+import HotelIcon from '@mui/icons-material/Hotel';
+import KitchenIcon from '@mui/icons-material/Kitchen';
+import TableBarIcon from '@mui/icons-material/TableBar';
+import FoodBankIcon from '@mui/icons-material/FoodBank';
+import Avatar from '@mui/material/Avatar';
+import Logout from '@mui/icons-material/Logout';
+import Settings from '@mui/icons-material/Settings';
+import MenuItem from '@mui/material/MenuItem';
+import Menu from '@mui/material/Menu';
+import PersonAdd from '@mui/icons-material/PersonAdd';
+import RealTime from '../pages/RealTime';
 
 const Search = styled('div')(({ theme }) => ({
   position: 'relative',
@@ -67,7 +66,7 @@ const StyledInputBase = styled(InputBase)(({ theme }) => ({
     transition: theme.transitions.create('width'),
     width: '100%',
     [theme.breakpoints.up('md')]: {
-      width: '20ch',
+      width: '10ch',
     },
   },
 }));
@@ -78,6 +77,14 @@ export default function NavigationBar() {
   const [openList, setListOpen] = React.useState(false);
   const { user, logout } = useAuthContext();
   const [isLoggedIn, setIsLoggedIn] = React.useState(false); // 기본적으로 로그아웃 상태
+  const [anchorEl, setAnchorEl] = React.useState(null);
+  const open = Boolean(anchorEl);
+  const handleClick = (event) => {
+    setAnchorEl(event.currentTarget);
+  };
+  const handleClose = () => {
+    setAnchorEl(null);
+  };
 
   // ============== user 관련 함수들 =================
   const isAdmin = user && user.isAdmin == true;
@@ -140,28 +147,15 @@ export default function NavigationBar() {
   // 변경: AccountCircle 아이콘을 세션 로그인 상태에 따라 다르게 렌더링
 
   const DrawerList = (
-    <Box sx={{ width: 350 }} role="presentation">
+    <Box sx={{ width: 350, }} role="presentation" >
       <List>
         <ListItem disablePadding>
-          <ListItemButton>
+          <ListItemButton onClick={() => setDrawerOpen(false)}>
             <ListItemIcon>
               <WhatshotIcon />
             </ListItemIcon>
-              {/* Render admin options if user is an admin */}
-      {isAdmin && (
-        <>
-          <ListItem disablePadding>
-            <ListItemButton>
-              <ListItemIcon>
-                <ListIcon />
-              </ListItemIcon>
-              <ListItemText primary="Admin Option 1" />
-            </ListItemButton>
-          </ListItem>
-        </>
-      )}
-
-            <ListItemText primary="특가" />
+            {/* Render admin options if user is an admin */}
+            <ListItemText component={Link} to={'/'} primary="특가" />
           </ListItemButton>
         </ListItem>
         <ListItem disablePadding>
@@ -175,35 +169,47 @@ export default function NavigationBar() {
         </ListItem>
         <Collapse in={openList} unmountOnExit>
           <List component="div" disablePadding>
-            <ListItemButton sx={{ pl: 4 }}>
+            <ListItemButton sx={{ pl: 4 }} component={Link} to={'itemlist/의자'} onClick={() => setDrawerOpen(false)}>
               <ListItemIcon>
                 <WhatshotIcon />
               </ListItemIcon>
               <ListItemText primary="의자" />
             </ListItemButton>
-            <ListItemButton sx={{ pl: 4 }}>
+            <ListItemButton sx={{ pl: 4 }} component={Link} to={'itemlist/소파'} onClick={() => setDrawerOpen(false)}>
               <ListItemIcon>
-                <WhatshotIcon />
+                <WeekendIcon />
+              </ListItemIcon>
+              <ListItemText primary="소파" />
+            </ListItemButton>
+            <ListItemButton sx={{ pl: 4 }} component={Link} to={'itemlist/책상'} onClick={() => setDrawerOpen(false)}>
+              <ListItemIcon>
+                <DeskIcon />
               </ListItemIcon>
               <ListItemText primary="책상" />
             </ListItemButton>
-            <ListItemButton sx={{ pl: 4 }}>
+            <ListItemButton sx={{ pl: 4 }} component={Link} to={'itemlist/침대'} onClick={() => setDrawerOpen(false)}>
               <ListItemIcon>
-                <WhatshotIcon />
+                <HotelIcon />
               </ListItemIcon>
-              <ListItemText primary="책상" />
+              <ListItemText primary="침대" />
             </ListItemButton>
-            <ListItemButton sx={{ pl: 4 }}>
+            <ListItemButton sx={{ pl: 4 }} component={Link} to={'itemlist/책장'} onClick={() => setDrawerOpen(false)}>
               <ListItemIcon>
-                <WhatshotIcon />
+                <KitchenIcon />
               </ListItemIcon>
-              <ListItemText primary="책상" />
+              <ListItemText primary="책장" />
             </ListItemButton>
-            <ListItemButton sx={{ pl: 4 }}>
+            <ListItemButton sx={{ pl: 4 }} component={Link} to={'itemlist/식탁'} onClick={() => setDrawerOpen(false)}>
               <ListItemIcon>
-                <WhatshotIcon />
+                <FoodBankIcon />
               </ListItemIcon>
-              <ListItemText primary="책상" />
+              <ListItemText primary="식탁" />
+            </ListItemButton>
+            <ListItemButton sx={{ pl: 4 }} component={Link} to={'itemlist/테이블'} onClick={() => setDrawerOpen(false)}>
+              <ListItemIcon>
+                <TableBarIcon />
+              </ListItemIcon>
+              <ListItemText primary="테이블" />
             </ListItemButton>
           </List>
         </Collapse>
@@ -211,24 +217,55 @@ export default function NavigationBar() {
       <Divider />
       <Divider />
       <List>
-        {['주문내역', '내 정보'].map((text, index) => (
-          <ListItem key={text} disablePadding>
-            <ListItemButton>
+        <ListItem disablePadding>
+          <ListItemButton component={Link} to={'orderHistoryList'} onClick={() => setDrawerOpen(false)}>
+            <ListItemIcon>
+              <ShoppingCartIcon />
+            </ListItemIcon>
+            <ListItemText primary="주문내역" />
+          </ListItemButton>
+        </ListItem>
+        <ListItem disablePadding>
+          <ListItemButton component={Link} to={'wish/list'} onClick={() => setDrawerOpen(false)}>
+            <ListItemIcon>
+              <FavoriteIcon />
+            </ListItemIcon>
+            <ListItemText primary="찜목록" />
+          </ListItemButton>
+        </ListItem>
+        <ListItem disablePadding>
+          <ListItemButton component={Link} to={'userInfo'} onClick={() => setDrawerOpen(false)}>
+            <ListItemIcon>
+              <AccountCircleIcon />
+            </ListItemIcon>
+            <ListItemText primary="내 정보" />
+          </ListItemButton>
+        </ListItem>
+        {isAdmin && (
+          <ListItem disablePadding>
+            <ListItemButton component={Link} to={'admin/chart'} onClick={() => setDrawerOpen(false)}>
               <ListItemIcon>
-                {index % 2 === 0 ? <ShoppingCartIcon /> : <AccountCircle />}
+                <ListIcon />
               </ListItemIcon>
-              <ListItemText primary={text} />
+              <ListItemText primary="Admin Option 1" />
             </ListItemButton>
           </ListItem>
-        ))}
+        )}
       </List>
     </Box>
+
   );
 
   const StyledAppBar = styled(AppBar)({
-    backgroundColor: 'gray',
+    color: 'black',
+    backgroundColor: '#ece6cc',
     height: '120px',
     justifyContent: 'center',
+    position: 'fixed', // Add this line to make the app bar fixed
+    top: 0, // Add this line to fix the app bar at the top of the viewport
+    width: '100%', // Add this line to make the app bar cover the full width
+    zIndex: 1000, // Add this line to ensure the app bar appears above other content
+    boxShadow: 'none',
   });
 
   // 검색 버튼 클릭 시 실행되는 함수
@@ -240,64 +277,167 @@ export default function NavigationBar() {
     }
   };
 
+  const handleToCart = () => {
+    if (!user || !user.email) {
+      window.location.href = '/signIn';
+      return;
+    }
+    navigate('/cart');
+  };
+
+  const handleToOrderHistory = () => {
+    if (!user || !user.email) {
+      window.location.href = '/signIn';
+      return;
+    }
+    navigate('/OrderHistoryList');
+  };
+
   return (
-    <Box sx={{ flexGrow: 1, marginBottom: 2 }}>
+    <Box sx={{ flexGrow: 1, marginBottom: 2, paddingTop: '103px', }}>
       <StyledAppBar position="static">
         <Toolbar>
-          <div>
-            <Button onClick={toggleDrawer(true)} color="inherit"><MenuIcon /></Button>
-            <Drawer open={openDrawer} onClose={toggleDrawer(false)} BackdropProps={{ invisible: true }}>
-              {DrawerList}
-            </Drawer>
-          </div>
-          <Link to={'/wish/list'}>찜</Link>
-          <Box sx={{ flexGrow: 1 }} />
+          <Button onClick={toggleDrawer(true)} color="inherit"><MenuIcon /></Button>
+          <Drawer open={openDrawer} onClose={toggleDrawer(false)} BackdropProps={{ invisible: true }}>
+            {DrawerList}
+          </Drawer>
+          <Box sx={{ flexGrow: 0.55, display: { xs: 'none', md: 'flex' } }} />
           <Typography
             variant="h6"
             noWrap
             component="div"
-            sx={{ display: { xs: 'none', sm: 'block' }, textAlign: 'center', fontWeight: 'bolder' }}
+            sx={{
+              flexGrow: 1,
+              textAlign: 'center', // 수평 방향 가운데 정렬
+              display: 'flex', // 컨테이너를 플렉스 박스로 설정
+              justifyContent: 'center', // 수평 방향 가운데 정렬
+              alignItems: 'center', // 세로 방향 가운데 정렬
+            }}
           >
-            <Link to={'/'} className='mainPageLink'>FUNiture</Link>
+            <Link to={'/'} className='mainPageLink'>FUNniture</Link>
           </Typography>
           <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: 2 }}>
-            <form onSubmit={handleSearch}>
-              <Search>
-                <SearchIconWrapper>
-                  <SearchIcon />
-                </SearchIconWrapper>
-                <StyledInputBase
-                  name="search"
-                  placeholder="검색"
-                  inputProps={{ 'aria-label': 'search' }}
-                />
-              </Search>
-            </form>
-
-            <IconButton size="small" color="inherit">
-              <Badge badgeContent={1} color="error">
-                <ShoppingCartIcon />
-              </Badge>
-              <Typography sx={{ marginLeft: '0.5rem' }}>장바구니</Typography>
+            <Stack>
+              <form onSubmit={handleSearch}>
+                <Search>
+                  <SearchIconWrapper>
+                    <SearchIcon />
+                  </SearchIconWrapper>
+                  <StyledInputBase
+                    name="search"
+                    placeholder="검색"
+                    inputProps={{ 'aria-label': 'search' }}
+                  />
+                </Search>
+              </form>
+              <RealTime/>
+            </Stack>
+            <Menu
+              anchorEl={anchorEl}
+              id="account-menu"
+              open={open}
+              onClose={handleClose}
+              onClick={handleClose}
+              PaperProps={{
+                elevation: 0,
+                sx: {
+                  overflow: 'visible',
+                  filter: 'drop-shadow(0px 2px 8px rgba(0,0,0,0.32))',
+                  mt: 1.5,
+                  '& .MuiAvatar-root': {
+                    width: 32,
+                    height: 32,
+                    ml: -0.5,
+                    mr: 1,
+                  },
+                  '&::before': {
+                    content: '""',
+                    display: 'block',
+                    position: 'absolute',
+                    top: 0,
+                    right: 14,
+                    width: 10,
+                    height: 10,
+                    bgcolor: 'background.paper',
+                    transform: 'translateY(-50%) rotate(45deg)',
+                    zIndex: 0,
+                  },
+                },
+              }}
+              transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+              anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+            >
+              <MenuItem onClick={handleClose}>
+                <Avatar /> Profile
+              </MenuItem>
+              <MenuItem onClick={handleClose}>
+                <Avatar /> My account
+              </MenuItem>
+              <Divider />
+              <MenuItem onClick={handleClose}>
+                <ListItemIcon>
+                  <PersonAdd fontSize="small" />
+                </ListItemIcon>
+                Add another account
+              </MenuItem>
+              <MenuItem onClick={handleClose}>
+                <ListItemIcon>
+                  <Settings fontSize="small" />
+                </ListItemIcon>
+                Settings
+              </MenuItem>
+              <MenuItem onClick={handleClose}>
+                <ListItemIcon>
+                  <Logout fontSize="small" />
+                </ListItemIcon>
+                Logout
+              </MenuItem>
+            </Menu>
+            <IconButton size="small" color="inherit" onClick={handleToOrderHistory}>
+              <Stack direction="column" alignItems="center">
+                <Badge badgeContent={0} color="error">
+                  <StorageIcon />
+                </Badge>
+                <Typography variant="body2" sx={{ fontSize: '0.7rem' }}>주문내역</Typography>
+              </Stack>
             </IconButton>
-
+            <IconButton size="small" color="inherit" onClick={handleToCart}>
+              <Stack direction="column" alignItems="center">
+                <Badge badgeContent={0} color="error">
+                  <ShoppingCartIcon />
+                </Badge>
+                <Typography variant="body2" sx={{ fontSize: '0.7rem' }}>장바구니</Typography>
+              </Stack>
+            </IconButton>
             {isLoggedIn ? (
               <>
-                <Button color="inherit" onClick={handleLogout} startIcon={<LogoutIcon />}>
-                  로그아웃
-                </Button>
-                <Button color="inherit" onClick={handleUserInfo}>
-                  마이페이지
-                </Button>
+                <IconButton size="small" color="inherit" onClick={handleLogout}>
+                  <Stack direction="column" alignItems="center">
+                    <LogoutIcon />
+                    <Typography variant="body2" sx={{ fontSize: '0.7rem' }}>로그아웃</Typography>
+                  </Stack>
+                </IconButton>
+                <IconButton size="small" color="inherit" onClick={handleUserInfo}>
+                  <Stack direction="column" alignItems="center">
+                    <AssignmentIndIcon />
+                    <Typography variant="body2" sx={{ fontSize: '0.7rem' }}>마이페이지</Typography>
+                  </Stack>
+                </IconButton>
               </>
             ) : (
               <>
-                <Button color="inherit" onClick={handleLogin} startIcon={<LoginIcon />}>
-                  로그인
-                </Button>
-                <Button color="inherit" onClick={handleSignUp} startIcon={<PersonAddIcon />}>
-                  회원가입
-                </Button>
+                <IconButton size="small" color="inherit" onClick={handleLogin}>
+                  <Stack direction="column" alignItems="center">
+                    <LoginIcon />
+                    <Typography variant="body2" sx={{ fontSize: '0.7rem' }}>로그인</Typography>
+                  </Stack>
+                </IconButton>
+                <IconButton size="small" color="inherit" onClick={handleSignUp}>
+                  <Stack direction="column" alignItems="center">
+                    <PersonAddIcon />
+                    <Typography variant="body2" sx={{ fontSize: '0.7rem' }}>회원가입</Typography>
+                  </Stack>
+                </IconButton>
               </>
             )}
           </Box>

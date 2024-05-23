@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-const App = () => {
+const RealTime = () => {
   const [rank, setRank] = useState(0);
 
   const items = [
@@ -25,10 +25,10 @@ const App = () => {
   }, []);
 
   return (
-    <div style={styles.container}>
-      <h1 style={styles.title}>Real-Time Search Terms</h1>
+    <div>
       <div style={styles.term}>
-        <span style={styles.rank}>{(rank + 1).toString().padStart(2, '0')}</span> {items[rank]}
+        <span style={styles.rank}>{(rank + 1).toString().padStart(2, '0')}</span>
+        <span style={styles.rankName}>{items[rank]}</span> 
       </div>
     </div>
   );
@@ -52,16 +52,18 @@ const styles = {
     marginBottom: '20px',
   },
   term: {
-    padding: '10px',
-    border: '1px solid #ddd',
-    marginBottom: '10px',
     fontSize: '16px',
   },
   rank: {
     color: 'orange', // 숫자의 색상을 주황색으로 지정
     fontWeight: 'bold', // 굵은 글꼴로 설정
     fontFamily: 'Arial, sans-serif', // 원하는 둥근체 글꼴로 변경
+    marginLeft: 20
+  },
+  rankName: {
+    fontFamily: 'Arial, sans-serif', // 원하는 둥근체 글꼴로 변경
+    marginLeft: 20
   }
 };
 
-export default App;
+export default RealTime;
