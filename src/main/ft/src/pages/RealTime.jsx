@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { MdOutlineArrowDropDown } from "react-icons/md";
 
 const RealTime = () => {
   const [rank, setRank] = useState(0);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   const items = [
     '2층침대',
@@ -24,12 +26,38 @@ const RealTime = () => {
     return () => clearInterval(interval);
   }, []);
 
+  const toggleDropdown = () => {
+    setIsDropdownOpen(!isDropdownOpen);
+  };
+
+
+
   return (
-    <div>
-      <div style={styles.term}>
+    <div style={styles.container}>
+      <div style={styles.term} >
         <span style={styles.rank}>{(rank + 1).toString().padStart(2, '0')}</span>
-        <span style={styles.rankName}>{items[rank]}</span> 
+        <span style={styles.rankName}>{items[rank]}</span>
+        <button onClick={toggleDropdown}>
+          <MdOutlineArrowDropDown />
+        </button>
       </div>
+      {isDropdownOpen && (
+        <div style={styles.dropdown}>
+          <span style={styles.dropdownTitle}>실시간 쇼핑 검색어</span>
+          <br />
+
+          <button style={{ textAlign: 'center' }}>
+            1~10
+          </button>
+
+          {items.map((item, index) => (
+            <div key={index} style={styles.dropdownItem}>
+              {index + 1}. {item}
+            </div>
+          ))}
+
+        </div>
+      )}
     </div>
   );
 };
@@ -37,7 +65,6 @@ const RealTime = () => {
 const styles = {
   container: {
     fontFamily: 'Arial, sans-serif',
-    backgroundColor: '#f4f4f4',
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
@@ -45,27 +72,59 @@ const styles = {
     margin: 0,
     flexDirection: 'column',
     padding: '20px',
-    borderRadius: '8px',
-    boxShadow: '0 2px 10px rgba(0, 0, 0, 0.1)',
-  },
-  title: {
-    marginBottom: '20px',
+
   },
   term: {
     fontSize: '16px',
+    position: 'relative',
+    cursor: 'pointer',
   },
   rank: {
-    color: 'orange', // 숫자의 색상을 주황색으로 지정
-    fontWeight: 'bold', // 굵은 글꼴로 설정
-    fontFamily: 'Arial, sans-serif', // 원하는 둥근체 글꼴로 변경
-    marginLeft: 20
+    color: 'orange',
+    fontWeight: 'bold',
+    fontFamily: 'Arial, sans-serif',
+    marginLeft: 20,
   },
   rankName: {
-    fontFamily: 'Arial, sans-serif', // 원하는 둥근체 글꼴로 변경
-    marginLeft: 20
-  }
+    fontFamily: 'Arial, sans-serif',
+    marginLeft: 20,
+  },
+  dropdown: {
+    position: 'absolute',
+    top: 'calc(100% + 10px)', // 검색어 아래에 배치
+    right: 250,
+    backgroundColor: 'white',
+    border: '1px solid #ddd',
+    borderRadius: '4px',
+    boxShadow: '0 2px 10px rgba(0, 0, 0, 0.1)',
+    zIndex: 1,
+    padding: '20px',
+    width: '200px', // 수정된 부분: 더 큰 너비
+    maxHeight: '600px', // 수정된 부분: 더 큰 높이
+    overflowY: 'auto',
+  },
+  dropdownTitle: {
+    fontWeight: 'bold',
+    marginBottom: '5px',
+  },
+  dropdownItem: {
+    padding: '5px',
+    cursor: 'pointer',
+  },
+  topRankButtonContainer: {
+    display: 'flex',
+    justifyContent: 'center',
+    marginTop: '10px',
+  },
+  topRankButton: {
+    border: 'none',
+    backgroundColor: '#007bff',
+    color: 'white',
+    padding: '8px 16px',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    transition: 'background-color 0.3s',
+  },
 };
-
-
 
 export default RealTime;

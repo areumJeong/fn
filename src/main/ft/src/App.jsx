@@ -10,7 +10,7 @@ export default function App() {
     <AuthContextProvider>
         <NavigationBar/>
         <Outlet />
-        <RealTime />
+        {/* <RealTime /> */}
         <Footer />
     </AuthContextProvider>
   );
