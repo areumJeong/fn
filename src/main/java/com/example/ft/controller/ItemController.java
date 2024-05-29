@@ -2,6 +2,7 @@ package com.example.ft.controller;
 
 import java.time.LocalDateTime;
 import java.time.ZonedDateTime;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -31,8 +32,8 @@ import com.example.ft.entity.ItemTag;
 import com.example.ft.entity.SaleData;
 import com.example.ft.entity.Wish;
 import com.example.ft.service.ItemService;
+import com.example.ft.service.RealTimesService;
 import com.example.ft.service.WishService;
-import com.fasterxml.jackson.annotation.JacksonInject.Value;
 
 @SpringBootApplication(exclude = SecurityAutoConfiguration.class)
 @Slf4j 
@@ -42,6 +43,7 @@ import com.fasterxml.jackson.annotation.JacksonInject.Value;
 public class ItemController {
 	private final ItemService itemService;
 	private final WishService wishService;
+	private final RealTimesService realTimeService;
 	
 	@GetMapping("/list")
 	public JSONArray list() {
@@ -53,7 +55,58 @@ public class ItemController {
 			jObj.put("name", item.getName());
 			jObj.put("category", item.getCategory());
 			jObj.put("img1", item.getImg1());
+			jObj.put("content", item.getContent());
+			jObj.put("price", item.getPrice());
+			jObj.put("salePrice", item.getSalePrice());
+			jObj.put("saleDate", item.getSaleDate());
+			jObj.put("regDate", item.getRegDate());
+			jObj.put("totalSta", item.getTotalSta());
+			jObj.put("company", item.getCompany());
+			jObj.put("cost", item.getCost());
+			jArr.add(jObj);
+		}
+		return jArr;
+	}
+	
+	@GetMapping("/search/{query}")
+    public JSONArray getSearchItemList(@PathVariable String query) {
+		realTimeService.insertRealTime(query);
+        List<Item> list = itemService.getSearchItemList(query);
+        JSONArray jArr = new JSONArray();
+        for (Item item : list) {
+            JSONObject jObj = new JSONObject();
+            jObj.put("iid", item.getIid());
+            jObj.put("name", item.getName());
+            jObj.put("category", item.getCategory());
+            jObj.put("img1", item.getImg1());
+            jObj.put("img2", item.getImg2());
+            jObj.put("img3", item.getImg3());
+            jObj.put("content", item.getContent());
+            jObj.put("price", item.getPrice());
+            jObj.put("salePrice", item.getSalePrice());
+            jObj.put("saleDate", item.getSaleDate());
+            jObj.put("regDate", item.getRegDate());
+            jObj.put("isDeleted", item.getIsDeleted());
+            jObj.put("totalSta", item.getTotalSta());
+            jObj.put("company", item.getCompany());
+            jObj.put("cost", item.getCost());
+            jArr.add(jObj);
+        }
+        return jArr;
+    }
+	
+	@GetMapping("/newList")
+	public JSONArray newList() {
+		List<Item> list = itemService.getItemNewList();
+		JSONArray jArr = new JSONArray();
+		for(Item item : list) {
+			JSONObject jObj = new JSONObject(); 
+			jObj.put("iid", item.getIid());
+			jObj.put("name", item.getName());
+			jObj.put("category", item.getCategory());
+			jObj.put("img1", item.getImg1());
 			jObj.put("img2", item.getImg2());
+			jObj.put("img3", item.getImg3());
 			jObj.put("content", item.getContent());
 			jObj.put("price", item.getPrice());
 			jObj.put("salePrice", item.getSalePrice());
@@ -77,6 +130,7 @@ public class ItemController {
 		jItem.put("category", item.getCategory());
 		jItem.put("img1", item.getImg1());
 		jItem.put("img2", item.getImg2());
+		jItem.put("img3", item.getImg3());
 		jItem.put("content", item.getContent());
 		jItem.put("price", item.getPrice());
 		jItem.put("salePrice", item.getSalePrice());
@@ -159,7 +213,7 @@ public class ItemController {
 		String img1 = (itemRequest.getImg1() == null || itemRequest.getImg1().equals(""))? itemService.getItemIId(itemRequest.getIid()).getImg1():itemRequest.getImg1();
 		String img2 = (itemRequest.getImg2() == null || itemRequest.getImg2().equals(""))? itemService.getItemIId(itemRequest.getIid()).getImg2():itemRequest.getImg2();
 		String img3 = (itemRequest.getImg3() == null || itemRequest.getImg3().equals(""))? itemService.getItemIId(itemRequest.getIid()).getImg3():itemRequest.getImg3();
-	    // 상품 정보 업데이트
+		// 상품 정보 업데이트
 	    Item item = Item.builder()
 	            .name(itemRequest.getName())
 	            .category(itemRequest.getCategory())
@@ -214,9 +268,9 @@ public class ItemController {
 	    Integer[] ioids = itemRequest.getIoid();
 	    if (options != null && counts != null) {
 	        for (int i = 0; i < options.length; i++) {
-	            if (i < counts.length && counts[i] > 0) { 
+	            if (i < counts.length && counts[i] >= 0) { 
 	                if (ioids != null && i < ioids.length && ioids[i] != null && ioids[i] != 0) { 
-	                    ItemOption itemOption = ItemOption.builder()
+	                	ItemOption itemOption = ItemOption.builder()
 	                            .option(options[i])
 	                            .count(counts[i])
 	                            .ioid(ioids[i])
@@ -287,5 +341,46 @@ public class ItemController {
 	    return "Success";
 	}
 	
+	@GetMapping("itemMenu/{menu}")
+	public JSONArray getlist(@PathVariable String menu) {
+		System.out.println(menu);
+		List<Item> list = new ArrayList<>();
+		switch (menu) {
+			case "hot": {
+				list = itemService.getHotItemList();
+				break;
+			}
+			case "sale": {
+				list = itemService.getSaleItemList();
+				break;
+			}
+			case "mostReview": {
+				list = itemService.getMostReviewItemList();
+				break;
+			}
+			default :{
+				list = itemService.getCategoryItemList(menu);
+				break;
+			}
+		}
+		JSONArray jArr = new JSONArray();
+		for(Item item : list) {
+			JSONObject jObj = new JSONObject(); 
+			jObj.put("iid", item.getIid());
+			jObj.put("name", item.getName());
+			jObj.put("category", item.getCategory());
+			jObj.put("img1", item.getImg1());
+			jObj.put("content", item.getContent());
+			jObj.put("price", item.getPrice());
+			jObj.put("salePrice", item.getSalePrice());
+			jObj.put("saleDate", item.getSaleDate());
+			jObj.put("regDate", item.getRegDate());
+			jObj.put("totalSta", item.getTotalSta());
+			jObj.put("company", item.getCompany());
+			jObj.put("cost", item.getCost());
+			jArr.add(jObj);
+		}
+		return jArr;
+	}
 	
 }

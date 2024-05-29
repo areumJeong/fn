@@ -2,6 +2,7 @@ package com.example.ft.controller;
 
 import java.util.List;
 
+import org.slf4j.Logger;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
 import org.springframework.stereotype.Controller;
@@ -24,11 +25,10 @@ import com.example.ft.entity.ItemRequest;
 import com.example.ft.entity.Review;
 import com.example.ft.service.BoardService;
 import com.example.ft.service.ItemService;
+import com.example.ft.service.OrderService;
 import com.example.ft.service.ReviewService;
 
 import org.springframework.web.bind.annotation.RequestBody;
-
-
 
 @SpringBootApplication(exclude = SecurityAutoConfiguration.class)
 @Slf4j  //log로 값을 출력
@@ -39,9 +39,11 @@ public class BoardController {
 	private final BoardService boardService; 
 	private final ReviewService reviewService; 
 	private final ItemService itemService;
+	private final OrderService orderService;
 	
 	@GetMapping("/list/{type}/{iid}")
 	public JSONArray list(@PathVariable String type, @PathVariable int iid) {
+		
 		JSONArray jArr = new JSONArray();
 		if (type.equals("review")) {
 			List<Board> list = reviewService.getReviewList(type, iid);
@@ -73,6 +75,7 @@ public class BoardController {
 				jObj.put("regDate",board.getRegDate());
 				jObj.put("content",board.getContent());
 				jObj.put("img",board.getImg());
+				jObj.put("secretMsg",board.getSecretMsg());
 				jArr.add(jObj);
 			}
 		}
@@ -84,7 +87,9 @@ public class BoardController {
 		Board board = Board.builder()
 				  		.iid(boardData.getIid()).email(boardData.getEmail()).type(boardData.getType())
 				  		.typeQnA(boardData.getTypeQnA()).title(boardData.getTitle())
-				  		.content(boardData.getContent()).img(boardData.getImg()).build();
+				  		.content(boardData.getContent()).img(boardData.getImg())
+				  		.secretMsg(boardData.getSecretMsg())
+				  		.build();
 		boardService.insertBoard(board);
 		if (boardData.getType().equals("review")) {
 			Review review = Review.builder()
@@ -96,7 +101,7 @@ public class BoardController {
 						.iid(boardData.getIid()).totalSta(totalSta)
 						.build();
 			itemService.totalSta(item);
-			
+			orderService.oiidReviewUpdate(boardData.getOiid());
 		}
 		return "등록되었습니다.";
 	}
@@ -113,7 +118,6 @@ public class BoardController {
 			Review review = Review.builder()
 							.vid(boardData.getVid()).sta(boardData.getSta())
 							.build();
-			System.out.println(boardData.getVid());
 			reviewService.updateReview(review);
 			int totalSta = reviewService.totalStaIid(boardData.getIid());
 			Item item = Item.builder()
@@ -128,5 +132,46 @@ public class BoardController {
 	public String boardDelete(@PathVariable int bid) {
 		boardService.deleteBoard(bid);
 		return "삭제되었습니다.";
+	}
+	
+	@GetMapping("/QnAList")
+	public JSONArray list() {
+		JSONArray jArr = new JSONArray();
+		List<Board> list = boardService.getQnAList();
+		for(Board board : list) {
+			JSONObject jObj = new JSONObject();
+			jObj.put("bid",board.getBid());
+			jObj.put("iid",board.getIid());
+			jObj.put("email",board.getEmail());
+			jObj.put("type",board.getType());
+			jObj.put("typeQnA",board.getTypeQnA());
+			jObj.put("title",board.getTitle());
+			jObj.put("regDate",board.getRegDate());
+			jObj.put("content",board.getContent());
+			jObj.put("img",board.getImg());
+			jArr.add(jObj);
+		}
+		return jArr;
+	}
+	
+	@GetMapping("/adminQnAList")
+	public JSONArray adminQnAList() {
+		JSONArray jArr = new JSONArray();
+		List<Board> list = boardService.adminGetQnAList();
+		for(Board board : list) {
+			JSONObject jObj = new JSONObject();
+			jObj.put("bid",board.getBid());
+			jObj.put("iid",board.getIid());
+			jObj.put("email",board.getEmail());
+			jObj.put("type",board.getType());
+			jObj.put("typeQnA",board.getTypeQnA());
+			jObj.put("title",board.getTitle());
+			jObj.put("regDate",board.getRegDate());
+			jObj.put("content",board.getContent());
+			jObj.put("img",board.getImg());
+			jObj.put("replyStatus",board.getReplyStatus());
+			jArr.add(jObj);
+		}
+		return jArr;
 	}
 }

@@ -19,8 +19,8 @@ public interface BoardDao {
 	@Select("select * from board where isDeleted=0 and type=#{type} and iid=#{iid} order by regDate desc")
 	List<Board> getBoardList(String type, int iid);
 
-	@Insert("insert into  Board values (default, #{iid}, #{email}, #{type},"
-			+ " #{typeQnA}, #{title}, default, #{content}, #{img}, default)")
+	@Insert("insert into Board values (default, #{iid}, #{email}, #{type},"
+			+ " #{typeQnA}, #{title}, default, #{content}, #{img}, default, #{secretMsg})")
 	@SelectKey(statement="SELECT LAST_INSERT_ID()", keyProperty="bid", before=false, resultType=int.class)
 	void insertBoard(Board board);
 	
@@ -30,5 +30,11 @@ public interface BoardDao {
 	
 	@Update("update Board set isDeleted=1 where bid=#{bid}")
 	void deleteBoard(int bid);
+	
+	@Select("select * from board where type='QnA' and isDeleted=0")
+	List<Board> getQnAList();
 
+	@Select("SELECT b.*, CASE WHEN r.bid IS NULL THEN '미답변' ELSE '답변완료' END AS replyStatus "
+			+ "	FROM board b LEFT JOIN reply r ON b.bid = r.bid AND r.isDeleted = 0 WHERE b.type = 'QnA' AND b.isDeleted = 0")
+	List<Board> adminGetQnAList();
 }

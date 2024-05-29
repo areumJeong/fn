@@ -1,196 +1,270 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import { selectUserData } from '../api/firebase';
+import { getAuth, onAuthStateChanged } from 'firebase/auth';
+import { useNavigate } from 'react-router-dom';
+import {
+  Box, Button, Container, Grid, Typography, Table, TableBody, TableCell, TableHead, TableRow,
+  Input, CardMedia, useMediaQuery, useTheme,
+} from '@mui/material';
+import '../css/cartPage.css';
+import { deleteAllCartItems, deleteCartItem, fetchCartItem, updateCartItemQuantity } from '../api/cartApi';
 
-const CartPage = ({ email }) => {
+const CartPage = () => {
   const [cartItems, setCartItems] = useState([]);
-  const [selectedItems, setSelectedItems] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
+  const [currentUserEmail, setCurrentUserEmail] = useState(null);
+  const [userInfo, setUserInfo] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const auth = getAuth();
+  const navigate = useNavigate();
+  const theme = useTheme();
+  const isSmallScreen = useMediaQuery(theme.breakpoints.down('md'));
 
+  // 유저정보
   useEffect(() => {
-    // 장바구니 목록을 받아오는 API 호출
-    const fetchCartItems = async () => {
-      try {
-        const response = await axios.get(`/ft/api/carts/list/${email}}`);
-        console.log(response.request.status); // 200
-        console.log(response.request.statusText) // ok
-        setCartItems(response.data); // 전체 장바구니 목록을 설정
-        console.log(response.data);
-      } catch (error) {
-        // alert('Re')
-        console.error('장바구니 목록을 불러오는데 실패했습니다:', error);
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setCurrentUserEmail(user.email);
+      } else {
+        setCurrentUserEmail(null);
       }
-    };
-
-    fetchCartItems();
-  }, [email]);
+    });
+  }, [auth]);
 
   useEffect(() => {
-    const calculateSubTotal = () => {
-      // 선택된 상품의 총 가격 계산
-      const sum = cartItems.reduce((acc, curr) => {
-        const itemTotal = curr.count * curr.price;
-        return acc + itemTotal;
-      }, 0);
-      // 총 가격을 totalCount 상태에 업데이트
-      setTotalCount(sum);
-    };
+    if (currentUserEmail) {
+      const fetchUserInfo = async () => {
+        try {
+          const info = await selectUserData(currentUserEmail);
+          setUserInfo(info);
+          setIsAdmin(info && info.isAdmin === 1);
+        } catch (error) {
+          console.error('사용자 정보를 불러오는 중 에러:', error);
+        }
+      };
+      fetchUserInfo();
+      fetchCartItems();
+    }
+  }, [currentUserEmail]);
 
-    calculateSubTotal(); // 최초 실행 및 cartItems 변경 시 실행
-  }, [cartItems]);
-
-  useEffect(() => {
-    // 선택된 상품들의 총 합계 계산
-    const calculatetotalCount = () => {
-      const sum = selectedItems.reduce((acc, curr) => acc + curr.totalPrice, 0);
-      setTotalCount(sum);
-    };
-
-    calculatetotalCount();
-  }, [selectedItems]);
-
-  // 상품을 선택하는 토글
-  const handleToggleItem = (itemId) => {
-    const isSelected = selectedItems.some((selectedItem) => selectedItem.iid === itemId);
-  
-    if (isSelected) {
-      // 이미 선택된 상품일 경우 제거
-      setSelectedItems((prevItems) => prevItems.filter((item) => item.iid !== itemId));
-    } else {
-      // 선택되지 않은 상품일 경우 추가
-      const selectedItem = cartItems.find((item) => item.iid === itemId);
-      setSelectedItems((prevItems) => [...prevItems, selectedItem]);
+  const fetchCartItems = async () => {
+    try {
+      const response = await fetchCartItem(currentUserEmail);
+      setCartItems(response);
+      console.log(response.data);
+    } catch (error) {
+      console.error('장바구니 목록을 불러오는데 실패했습니다:', error);
     }
   };
 
-  const removeFromCart = (itemId) => {
-    // 선택한 상품을 장바구니에서 제거
-    setCartItems((prevCartItems) => prevCartItems.filter((item) => item.iid !== itemId));
-    // 선택한 상품 목록에서도 제거
-    setSelectedItems((prevItems) => prevItems.filter((item) => item.iid !== itemId));
+  useEffect(() => {
+    const calculateTotalPrice = () => {
+      const totalPrice = cartItems.reduce((acc, item) => acc + item.totalPrice, 0);
+      setTotalCount(totalPrice);
+    };
+
+    calculateTotalPrice();
+  }, [cartItems]);
+
+  // 카트 아이템 삭제
+  const handleDeleteItem = (cid) => {
+    deleteCartItem(currentUserEmail, cid)
+      .then((response) => {
+        if (response.data === true) {
+          // 성공적으로 삭제된 경우
+          const updatedItems = cartItems.filter((item) => item.cid !== cid);
+          setCartItems(updatedItems);
+          console.log('상품이 성공적으로 삭제되었습니다.');
+        } else {
+          console.error('상품 삭제 실패: 서버 응답 오류');
+        }
+      })
+      .catch((error) => {
+        console.error('상품 삭제 실패:', error);
+      });
   };
 
-  const handleQuantityChange = async (itemId, newQuantity) => {
+  // 전체 아이템 삭제 요청
+  const handleDeleteAllItems = () => {
+    deleteAllCartItems(currentUserEmail)
+      .then((response) => {
+        if (response.data === true) {
+          // 성공적으로 삭제된 경우
+          setCartItems([]); // 장바구니를 비웁니다.
+          console.log('모든 상품이 성공적으로 삭제되었습니다.');
+        } else {
+          console.error('상품 삭제 실패: 서버 응답 오류');
+        }
+      })
+      .catch((error) => {
+        console.error('상품 삭제 실패:', error);
+      });
+  };
+
+  // 카트 아이템 수량 변경
+  const handleQuantityChange = async (cartId, itemId, itemOption, newQuantity) => {
     try {
       const count = parseInt(newQuantity, 10);
-  
-      // 수량 업데이트 요청
-      await axios.post('/ft/api/carts/update', {
-        iid: itemId,
-        count: count
-      });
-  
-    // 선택된 상품의 정보를 찾아서 totalPrice를 업데이트
-    const updatedItems = cartItems.map(item => {
-      if (item.iid === itemId) {
-        // 기존 totalPrice 가져오기
-        const newTotalPrice = count * item.price;
 
-         // 업데이트된 항목 반환
-         return { ...item, count: count, totalPrice: newTotalPrice };
+      await updateCartItemQuantity(cartId, currentUserEmail, itemId, itemOption, count,
+      ).then(response => {
+        console.log(response);
+        if (response.data) {
+          console.log('변경되었습니다.');
         } else {
-          return item; // 업데이트할 항목이 아닌 경우 기존 항목 그대로 반환
+          console.log('재고가 부족합니다.');
+        }
+      })
+        .catch(error => {
+          console.error('장바구니 추가 실패:', error);
+        });
+
+      const updatedItems = cartItems.map((item) => {
+        if (item.cid === cartId) {
+          const newTotalPrice = count * item.price;
+          return { ...item, count: count, totalPrice: newTotalPrice };
+        } else {
+          return item;
         }
       });
 
-    // 업데이트된 상품 목록으로 상태 업데이트
-    setCartItems(updatedItems);
+      setCartItems(updatedItems);
+    } catch (error) {
+      console.error('상품 수량 업데이트 실패:', error);
+    }
+  };
 
-    console.log('상품 수량이 업데이트되었습니다.');
-  } catch (error) {
-    console.error('상품 수량 업데이트 실패:', error);
-  }
-};
+  // 카트 아이템 렌더링
+  const renderCartItemRows = () => {
+    if (cartItems.length === 0) {
+      return (
+        <TableRow>
+          <TableCell colSpan={8} align="center">
+            장바구니가 비어 있습니다.
+          </TableCell>
+        </TableRow>
+      );
+    }
+
+    const handleClick = (item) => {
+      navigate(`/item/detail/${item.iid}`);
+    };
+
+    return cartItems.map((item) => (
+      <TableRow key={`${item.iid}-${item.option}`}>
+        <TableCell>
+          <CardMedia
+            component="img"
+            image={item.img1}
+            alt={item.img1}
+            style={{ height: 200, cursor: 'pointer' }}
+            onClick={() => handleClick(item)}
+            item={item}
+          />
+        </TableCell>
+        <TableCell>{item.name}</TableCell>
+        {!isSmallScreen &&
+          <TableCell>{item.price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}원</TableCell>
+        }
+        {!isSmallScreen &&
+          <TableCell>{item.option}</TableCell>
+        }
+        <TableCell>
+          <Input
+            type="number"
+            value={item.count}
+            onChange={(e) => handleQuantityChange(item.cid, item.iid, item.ioid, e.target.value)}
+            inputProps={{ min: 1, max: item.stockCount }}
+          />
+        </TableCell>
+        <TableCell>{item.totalPrice.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}원</TableCell>
+        <TableCell>
+          <Button onClick={() => handleDeleteItem(item.cid)} variant="contained" color="error">
+            X
+          </Button>
+        </TableCell>
+      </TableRow>
+    ));
+  };
+
+  // =================== order 관련 ======================
+
+  // orderpage로 보내주는 역할
+  const handleOrder = async () => {
+    if (!userInfo || !userInfo.email) {
+      // 사용자가 로그인되어 있지 않은 경우, 로그인 페이지로 리다이렉트
+      window.location.href = '/signIn'; // 로그인 페이지 URL을 실제로 사용하는 주소로 변경해주세요
+      return;
+    }
+
+    // 넘어갈 데이터들
+    const orderItems = cartItems.map((item) => ({
+      iid: item.iid, // orderItem
+      img: item.img1, // 띄우기
+      name: item.name, // order
+      ioid: item.ioid,
+      option: item.option, // 띄우기
+      count: item.count, // orderItem
+      price: item.salePrice && new Date(item.saleDate) > new Date() ? item.salePrice : item.price, // orderItem
+      totalPrice: item.totalPrice, // order
+    }));
+
+    // orderItems를 로컬 스토리지에 저장
+    localStorage.setItem('orderItems', JSON.stringify(orderItems)); //  객체나 배열을 JSON 문자열로 변환
+    console.log(orderItems);
+    // Order 페이지로 이동할 때 orderItems 상태를 함께 전달
+    navigate("/order", { state: { orderItems } });
+  };
+
+  // =================== order 관련 끝======================
 
   return (
-    <div className="container">
-      <div className="jumbotron" style={{ paddingTop: '50px', paddingBottom: '50px' }}>
-        <h2>장바구니</h2>
-      </div>
-      <div className="row" style={{ backgroundColor: '#f7f7f7', borderRadius: '20px', padding: '20px 0' }}>
-        <div className="col">
-          <input
-            type="checkbox"
-            id="allChk"
-            checked={selectedItems.length === cartItems.length}
-            onChange={() => {
-              if (selectedItems.length === cartItems.length) {
-                setSelectedItems([]);
-              } else {
-                setSelectedItems([...cartItems]); // 전체 선택 기능 추가
-              }
+    <Container
+      maxWidth="lg"
+      sx={{ mt: 5 }}
+    >
+      <Grid container spacing={2}>
+        <Grid item xs={12} md={15}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>이미지</TableCell>
+                <TableCell>상품명</TableCell>
+                {!isSmallScreen && <TableCell>가격</TableCell>}
+                {!isSmallScreen && <TableCell>옵션</TableCell>}
+                <TableCell>수량</TableCell>
+                <TableCell>합계</TableCell>
+                <TableCell>삭제</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>{renderCartItemRows()}</TableBody>
+          </Table>
+          <Box className="boxContainer">
+            <Typography
+              variant="subtitle1"
+              sx={{ mt: 1, whiteSpace: 'nowrap' }}
+            >
+              총 상품 가격: {totalCount.toFixed(0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}원
+            </Typography>
+          </Box>
+          <Box
+            xs={12}
+            sx={{
+              justifyContent: 'center'
             }}
-          />
-          <b>전체</b>
-        </div>
-        <div className="col text-end">
-          <button className="btn btn-danger me-2" onClick={() => selectedItems.forEach((item) => removeFromCart(item.iid))}>
-            선택 삭제
-          </button>
-          <button className="btn btn-success">주문하기</button>
-        </div>
-      </div>
-      <div className="row" style={{ paddingTop: '50px' }}>
-        <div className="col">
-          <table className="table table-hover">
-            <thead>
-              <tr>
-                <th>삭제</th>
-                <th>이미지</th>
-                <th>상품명</th>
-                <th>가격</th>
-                <th>수량</th>
-                <th>합계</th>
-              </tr>
-            </thead>
-            <tbody>
-              {cartItems.map((item) => (
-                <tr key={item.iid}>
-                  <td>
-                    <input
-                      type="checkbox"
-                      checked={selectedItems.some((selectedItem) => selectedItem.iid === item.iid)}
-                      onChange={() => handleToggleItem(item.iid)}
-                    />
-                  </td>
-                  <td>{item.img1}</td>
-                  <td>{item.name}</td>
-                  <td>
-                    {/* 프론트에서 적용하는 방법! */}
-                    {/* {saleDate && new Date(item.regDate) >= new Date(saleDate) ? (
-                      <span>{item.salePrice}원</span>
-                    ) : (
-                      <span>{item.price}원</span>
-                    )} */}
-                     <span>{item.price}원</span>
-                  </td>
-                  <td>
-                    <input
-                      type="number"
-                      value={item.count}
-                      onChange={(e) => handleQuantityChange(item.iid, e.target.value)}
-                      min={1}
-                      max={item.opcount}
-                    />
-                  </td>
-                  <td>{item.totalPrice}원</td>
-                  <td>
-                    <button onClick={() => handleToggleItem(item.iid)} className="btn btn-danger">
-                      삭제
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <div style={{ paddingTop: '20px' }}>
-            <div className="text-end">
-              <b>총액:</b> {totalCount.toFixed(0)}원
-            </div>
-            <button className="btn btn-secondary mt-3">쇼핑 계속하기</button>
-          </div>
-        </div>
-      </div>
-    </div>
+          >
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleOrder}
+              sx={{ marginTop: 2 }}
+            >
+              주문하기
+            </Button>
+          </Box>
+        </Grid>
+      </Grid>
+    </Container>
   );
 };
 

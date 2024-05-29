@@ -30,32 +30,26 @@ const RealTime = () => {
     setIsDropdownOpen(!isDropdownOpen);
   };
 
-
-
   return (
     <div style={styles.container}>
-      <div style={styles.term} >
+      <div style={styles.term}>
         <span style={styles.rank}>{(rank + 1).toString().padStart(2, '0')}</span>
         <span style={styles.rankName}>{items[rank]}</span>
-        <button onClick={toggleDropdown}>
+        <button style={styles.dropdownButton} onClick={toggleDropdown}>
           <MdOutlineArrowDropDown />
         </button>
       </div>
       {isDropdownOpen && (
         <div style={styles.dropdown}>
           <span style={styles.dropdownTitle}>실시간 쇼핑 검색어</span>
-          <br />
-
-          <button style={{ textAlign: 'center' }}>
-            1~10
-          </button>
-
+          <div style={styles.topRankButtonContainer}>
+            <button style={styles.topRankButton}>1~10</button>
+          </div>
           {items.map((item, index) => (
             <div key={index} style={styles.dropdownItem}>
               {index + 1}. {item}
             </div>
           ))}
-
         </div>
       )}
     </div>
@@ -72,36 +66,45 @@ const styles = {
     margin: 0,
     flexDirection: 'column',
     padding: '20px',
-
   },
   term: {
     fontSize: '16px',
-    position: 'relative',
+    display: 'flex',
+    alignItems: 'center',
     cursor: 'pointer',
+    width: '100%', // 추가된 부분
+    justifyContent: 'flex-start', // 추가된 부분
   },
   rank: {
     color: 'orange',
     fontWeight: 'bold',
-    fontFamily: 'Arial, sans-serif',
     marginLeft: 20,
   },
   rankName: {
-    fontFamily: 'Arial, sans-serif',
     marginLeft: 20,
+    flexGrow: 1, // 추가된 부분
+  },
+  dropdownButton: {
+    marginLeft: 'auto', // 오른쪽 끝에 배치
+    border: 'none',
+    backgroundColor: 'transparent',
+    cursor: 'pointer',
+    fontSize: '24px',
   },
   dropdown: {
-    position: 'absolute',
-    top: 'calc(100% + 10px)', // 검색어 아래에 배치
-    right: 250,
+    position: 'relative', // 수정된 부분
+    top: '10px',
+    right: '0',
     backgroundColor: 'white',
     border: '1px solid #ddd',
     borderRadius: '4px',
     boxShadow: '0 2px 10px rgba(0, 0, 0, 0.1)',
     zIndex: 1,
     padding: '20px',
-    width: '200px', // 수정된 부분: 더 큰 너비
-    maxHeight: '600px', // 수정된 부분: 더 큰 높이
+    width: '200px',
+    maxHeight: '600px',
     overflowY: 'auto',
+    marginTop: '10px', // 검색어 아래에 배치
   },
   dropdownTitle: {
     fontWeight: 'bold',
@@ -126,6 +129,5 @@ const styles = {
     transition: 'background-color 0.3s',
   },
 };
-
 
 export default RealTime;

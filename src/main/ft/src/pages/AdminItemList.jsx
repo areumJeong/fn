@@ -3,25 +3,32 @@ import axios from 'axios';
 import Grid from '@mui/material/Grid';
 import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
-import { Button } from "@mui/material";
+import { Button, Container, TextField } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import CountDown from "../components/CountDown";
 import SaleModal from "../components/SaleModal";
+import AdminCategoryBar from "../components/AdminCategoryBar";
+import AddCircleIcon from '@mui/icons-material/AddCircle';
+import { deletedItem, fetchItemListAPI, getItemDetail } from "../api/itemApi";
 
 export default function AdminItemList() {
   const [isLoading, setIsLoading] = useState(true);
   const [list, setList] = useState([]);
   const [stock, setStock] = useState([]); 
   const [modalOpen, setModalOpen] = useState(false); 
+  const [searchTerm, setSearchTerm] = useState(""); // 검색어 상태 추가
   const navigate = useNavigate();
   const [tags, setTags] = useState([]);
   const [selectedItemId, setSelectedItemId] = useState(null); 
   const [selectedPrice, setSelectedPrice] = useState(null); 
   const [selectedCost, setSelectedCost] = useState(null); 
+  const [selectedSalePrice, setSelectedSalePrice] = useState(null); 
+  const [selectedSaleDate, setSelectedSaleDate] = useState(null); 
+
   useEffect(() => {
-    axios.get('/ft/item/list')
+    fetchItemListAPI()
       .then(res => {
-        setList(res.data);
+        setList(res);
         setIsLoading(false);
       })
       .catch(err => console.log(err))
@@ -32,10 +39,11 @@ export default function AdminItemList() {
     const itemIds = list.map(item => item.iid);
     // iid 배열을 사용하여 재고
     itemIds.forEach((iid, idx) => {
-      axios.get(`/ft/item/detail/${iid}/em`)
+      getItemDetail(iid)
         .then(response => {
-          const { options, tags } = response.data;
+          const { options, tags } = response;
           const formattedOptions = options ? options.map(option => ({
+            iid: option.iid,
             ioid: option.ioid,
             option: option.option,
             stock: option.count, // 재고갯수
@@ -65,11 +73,13 @@ export default function AdminItemList() {
   }, [list]);
 
   // 모달 열기 함수
-  const openModal = (iid, price, cost) => {
+  const openModal = (iid, price, cost, salePrice, saleDate) => {
     setModalOpen(true);
     setSelectedItemId(iid); // 선택된 항목의 iid 설정
     setSelectedPrice(price)
     setSelectedCost(cost)
+    setSelectedSalePrice(salePrice)
+    setSelectedSaleDate(saleDate)
   };
 
   // 모달 닫기 함수
@@ -79,9 +89,9 @@ export default function AdminItemList() {
     setSelectedPrice(null)
     setSelectedCost(null)
     // 모달이 닫힐 때마다 새로운 데이터 가져오기
-    axios.get('/ft/item/list')
+    fetchItemListAPI()
       .then(res => {
-        setList(res.data);
+        setList(res);
       })
       .catch(err => console.log(err));
   };
@@ -90,9 +100,9 @@ export default function AdminItemList() {
   const deleteItem = (iid) => {
     const isConfirmed = window.confirm('정말 삭제하시겠습니까?');
     if (isConfirmed) {
-      axios.delete(`/ft/item/delete/${iid}`)
+      deletedItem(iid)
         .then(res => {
-          console.log(res.data);
+          console.log(res);
           // 삭제된 아이템을 UI에서도 동적으로 제거
           setList(prevList => prevList.filter(item => item.iid !== iid));
         })
@@ -101,14 +111,41 @@ export default function AdminItemList() {
         });
     }
   };
-  
+
+  // 검색어 변경 핸들러
+  const handleSearchChange = (event) => {
+    setSearchTerm(event.target.value);
+  };
+
+  // 검색 기능을 적용한 목록 필터링
+  const filteredList = list.filter(item =>
+    item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.iid.toString().toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
-    <>
-      <Button onClick={() => { navigate(`/admin/item/insert`) }}>아이템 추가</Button>
-      <Grid container spacing={2}>
-        {list.map((item, index) => (
-          <Grid item xs={6} sm={6} md={6} lg={6} key={index}>
-            <Paper style={{ padding: 20 }}>
+    <Container>
+      <AdminCategoryBar/>
+      <Button
+        onClick={() => navigate(`/admin/item/insert`)}
+        variant="contained"
+        color="primary"
+        style={{marginLeft:10}}
+        startIcon={<AddCircleIcon />}
+      >
+        상품 추가
+      </Button>
+      <TextField
+        label="검색"
+        variant="outlined"
+        value={searchTerm}
+        onChange={handleSearchChange}
+        style={{ marginBottom: 5, marginLeft: 5, }}
+      />
+      <Grid container spacing={2} style={{marginBottom:10}}>
+        {filteredList.map((item, index) => (
+          <Grid item xs={12} sm={12} md={12} lg={6} key={index}>
+            <Paper style={{ padding: 20, height:250 }}>
               <table style={{ width: '100%' }}>
                 <tbody>
                   <tr>
@@ -119,6 +156,7 @@ export default function AdminItemList() {
                       <Typography variant="h6" style={{ display: 'inline-block', lineHeight: '1.2', maxHeight: '2.4em', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {item.name || '\u00A0'}
                       </Typography>
+                      <Typography variant="body2">종류: {item.category || '\u00A0'}</Typography>
                       <Typography variant="body2">제조사: {item.company || '\u00A0'}</Typography>
                       <Typography variant="body2">원가: {item.cost ? item.cost.toLocaleString() + '원' : '\u00A0'}</Typography>
                       <Typography variant="body2">정가: {item.price ? item.price.toLocaleString() + '원' : '\u00A0'}</Typography>
@@ -138,12 +176,13 @@ export default function AdminItemList() {
                     <td style={{ verticalAlign: 'top' }}>
                       <Typography variant="h6">재고</Typography>
                       {stock[index]?.map((opt, idx) => (
-                        <Typography key={idx} variant="body2">{opt.option}: {(opt.stock === 0) ? '품절' : opt.stock+'개'}</Typography>
+                        <Typography key={idx} variant="body2" style={{ color: (opt.stock === 0) ? 'red' : 'inherit' }}>{opt.option}: {(opt.stock === 0) ? '품절' : opt.stock+'개'}</Typography>
                       ))}
                      {tags[index]?.map((tag, tagIndex) => (
                       <span 
                         key={tagIndex}
                         style={{ 
+                          cursor: 'pointer',
                           display: "inline-block",
                           borderRadius: "999px",
                           padding: "2px 8px",
@@ -162,10 +201,10 @@ export default function AdminItemList() {
                     </td>
                   </tr>
                   <tr>
-                    <td>
+                    <td colSpan={2}>
                       <Button variant="contained" color="primary" size="small" style={{ marginRight: 10 }} onClick={() => { navigate(`/admin/item/update/${item.iid}`) }}>수정</Button>
-                      <Button variant="contained" color="primary" size="small" style={{ marginRight: 10 }} onClick={() => openModal(item.iid, item.price, item.cost)}>  세일</Button>
-                      <Button variant="contained" color="secondary" size="small" onClick={() => deleteItem(item.iid)}>삭제</Button>
+                      <Button variant="contained" color="primary" size="small" style={{ marginRight: 10 }} onClick={() => openModal(item.iid, item.price, item.cost, item.salePrice, item.saleDate)}>  세일</Button>
+                      <Button variant="contained" color="error" size="small" onClick={() => deleteItem(item.iid)}>삭제</Button>
                     </td>
                   </tr>
                 </tbody>
@@ -175,7 +214,7 @@ export default function AdminItemList() {
         ))}
       </Grid>
       {/* 모달 */}
-      <SaleModal open={modalOpen} onClose={closeModal} iid={selectedItemId} price={selectedPrice} cost={selectedCost} /> 
-    </>
+      <SaleModal open={modalOpen} onClose={closeModal} iid={selectedItemId} price={selectedPrice} cost={selectedCost} ordSaleDate={selectedSaleDate} ordSalePrice={selectedSalePrice} /> 
+    </Container>
   )
 }

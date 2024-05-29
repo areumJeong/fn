@@ -26,6 +26,11 @@ public class ItemServiceImpl implements ItemService{
 	public List<Item> getItemList() {
 		return itemDao.getItemList();
 	}
+	
+	@Override
+	public List<Item> getItemNewList() {
+		return itemDao.getItemNewList();
+	}
 
 	@Override
 	public List<Item> getSearchItemList(String query) {
@@ -90,6 +95,11 @@ public class ItemServiceImpl implements ItemService{
 		itemDao.optionDeleted(ioid);
 	}
 	
+	@Override
+	public void inventoryCalculation(int ioid, int count) {
+		itemDao.inventoryCalculation(ioid, count);
+	}
+	
 	// itemTag
 	@Override
 	public int[] getItemTagItid(int iid) {
@@ -115,5 +125,25 @@ public class ItemServiceImpl implements ItemService{
 	public void tagDeleted(int itid) {
 		itemDao.tagDeleted(itid);
 	}
-	
+
+	@Override
+	public List<Item> getMostReviewItemList() {
+		return itemDao.getMostReviewItemList();
+	}
+
+	@Override
+	public List<Item> getSaleItemList() {
+		return itemDao.getSaleItemList();
+	}
+
+	@Override
+	public List<Item> getHotItemList() {
+		return itemDao.getHotItemList();
+	}
+
+	@Override
+	public List<Item> getCategoryItemList(String menu) {
+		return itemDao.getCategoryItemList(menu);
+	}
+
 }

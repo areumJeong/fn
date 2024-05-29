@@ -2,6 +2,8 @@ package com.example.ft.service;
 
 import java.util.List;
 
+import org.apache.ibatis.annotations.Select;
+
 import com.example.ft.entity.Item;
 import com.example.ft.entity.ItemOption;
 import com.example.ft.entity.ItemTag;
@@ -12,6 +14,8 @@ public interface ItemService {
 	Item getItemIId(int iid);	
 	
 	List<Item> getItemList();
+	
+	List<Item> getItemNewList();
 	
 	List<Item> getSearchItemList(String query);
 	
@@ -38,6 +42,8 @@ public interface ItemService {
 	
 	void optionDeleted(int ioidsToDelete);
 	
+	void inventoryCalculation(int ioid, int count);
+	
 	// itemTag
 	int[] getItemTagItid(int iid);
 	
@@ -48,4 +54,15 @@ public interface ItemService {
 	void tagUpdate(ItemTag itemTag);
 	
 	void tagDeleted(int itid);
+	
+	// 리뷰 많은순
+	List<Item> getMostReviewItemList();
+	
+	// 세일중
+	List<Item> getSaleItemList();
+	
+	// 구매가 많은 아이템(7일 기준으로)
+	List<Item> getHotItemList();
+
+	List<Item> getCategoryItemList(String menu);
 }

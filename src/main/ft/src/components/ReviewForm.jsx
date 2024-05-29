@@ -2,13 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { Modal, Typography, Grid, TextField } from "@mui/material";
 import { Button } from 'react-bootstrap';
 import '../css/reviewForm.css';
-import axios from 'axios'; 
 import { uploadImage } from "../api/cloudinary";
 import { selectUserData } from '../api/firebase';
 import { onAuthStateChanged, getAuth } from 'firebase/auth';
 import CloseIcon from '@mui/icons-material/Close';
+import { submitBoard } from '../api/boardApi';
 
-const ReviewFormModal = ({ isOpen, handleClose, iid }) => {
+const ReviewFormModal = ({ isOpen, handleClose, iid, oiid }) => {
   const [review, setReview] = useState('');
   const [rating, setRating] = useState(0);
   const [hoveredRating, setHoveredRating] = useState(0);
@@ -66,13 +66,15 @@ const ReviewFormModal = ({ isOpen, handleClose, iid }) => {
       sta: (rating == 0) ? 1 * 10 : rating * 10,
       img: form.img,
       email: userInfo.email,
+      oiid: oiid,
     };
-
-    axios.post('/ft/board/insert', formData)
+    console.log(formData);
+    submitBoard(formData)
       .then(response => {
         console.log('Review submitted successfully:', response.data);
         handleClose();
         setRating(null)
+        setReview(null)
       })
       .catch(error => {
         console.error('Error submitting review:', error);

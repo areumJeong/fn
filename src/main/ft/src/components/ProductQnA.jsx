@@ -2,13 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { Pagination, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, MenuItem, Select, IconButton, Modal, useMediaQuery, Accordion, AccordionSummary, Typography } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ImgModal from './ImgModal';
-import BuildIcon from '@mui/icons-material/Build';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import QnAEditModal from '../components/QnAEditModal';
-import axios from 'axios';
 import { selectUserData } from '../api/firebase';
 import { onAuthStateChanged, getAuth } from 'firebase/auth';
+import { fetchReplies } from '../api/replyApi';
+import { deleteBoard } from '../api/boardApi';
+import LockIcon from '@mui/icons-material/Lock';
+import { useAuthContext } from '../context/AuthContext';
+import SettingsIcon from '@mui/icons-material/Settings';
 
 export default function ProductQnA({ posts, reloadQnAData }) {
   const [currentPage, setCurrentPage] = useState(1);
@@ -19,10 +22,11 @@ export default function ProductQnA({ posts, reloadQnAData }) {
   const isMobile = useMediaQuery('(max-width:600px)');
   const [currentUserEmail, setCurrentUserEmail] = useState(null);
   const [userInfo, setUserInfo] = useState(null);
-  const [isAdmin, setIsAdmin] = useState(false);
   const auth = getAuth();
   const [replyStatus, setReplyStatus] = useState({});
   const [replies, setReplies] = useState({});
+  const { user, logout } = useAuthContext();
+  const isAdmin = user && user.isAdmin == true;
 
   useEffect(() => {
     onAuthStateChanged(auth, (user) => {
@@ -40,7 +44,6 @@ export default function ProductQnA({ posts, reloadQnAData }) {
         try {
           const info = await selectUserData(currentUserEmail);
           setUserInfo(info);
-          setIsAdmin(info && info.isAdmin === 1);
         } catch (error) {
           console.error('사용자 정보를 불러오는 중 에러:', error);
         }
@@ -56,9 +59,8 @@ export default function ProductQnA({ posts, reloadQnAData }) {
           const status = {};
           for (const post of posts) {
             if (post && post.bid) {
-              const response = await axios.get(`/ft/reply/list/${post.bid}`);
-              const repliesData = response.data;
-              status[post.bid] = repliesData.length > 0;
+              const response = await fetchReplies(post.bid);
+              status[post.bid] = response.length > 0;
             }
           }
           setReplyStatus(status);
@@ -86,9 +88,8 @@ export default function ProductQnA({ posts, reloadQnAData }) {
     setExpandedPost(expandedPost === index ? null : index);
     try {
       if (post && post.bid) { // 유효한 객체 및 bid인지 확인
-        const response = await axios.get(`/ft/reply/list/${post.bid}`);
-        const repliesData = response.data; // 가져온 답변 목록
-        setReplies(repliesData);
+        const response = await fetchReplies(post.bid);
+        setReplies(response);
       } else {
         console.error('유효하지 않은 게시물입니다.');
       }
@@ -114,7 +115,7 @@ export default function ProductQnA({ posts, reloadQnAData }) {
     const confirmDelete = window.confirm('정말로 이 게시물을 삭제하시겠습니까?');
     if (confirmDelete) {
       try {
-        const response = await axios.post(`/ft/board/delete/${post.bid}`);
+        const response = await deleteBoard(post.bid);
         console.log('포스트가 성공적으로 삭제되었습니다.', response);
         reloadQnAData();
       } catch (error) {
@@ -135,7 +136,7 @@ export default function ProductQnA({ posts, reloadQnAData }) {
         <Table style={{ width: '100%' }}>
           <TableHead>
             <TableRow>
-              <TableCell style={{ width: isMobile ? '10%' : '10%' }}>
+              <TableCell style={{ width: isMobile ? '5%' : '8%' }}>
                 <Select
                   value={selectedType}
                   onChange={handleTypeChange}
@@ -149,11 +150,15 @@ export default function ProductQnA({ posts, reloadQnAData }) {
                   <MenuItem value="교환">교환</MenuItem>
                 </Select>
               </TableCell>
-              <TableCell style={{ width: isMobile ? '15%' : '15%', fontWeight: 'bold', fontSize: '80%' }}>답변</TableCell>
-              <TableCell style={{ width: isMobile ? '60%' : '40%', fontWeight: 'bold', textAlign: 'center', fontSize: '80%' }} align="center">제목</TableCell>
-              <TableCell style={{ width: isMobile ? '20%' : '17%', fontWeight: 'bold', fontSize: '80%' }}>작성자</TableCell>
-              <TableCell style={{ width: isMobile ? '10%' : '10%', fontWeight: 'bold', fontSize: '80%' }}>작성일</TableCell>
-              <TableCell style={{ width: isMobile ? '10%' : '13%', fontWeight: 'bold', fontSize: '80%', textAlign: 'center', }}><BuildIcon/></TableCell>
+              {!isMobile && (
+                <TableCell style={{ width: '8%', fontWeight: 'bold', fontSize: '80%' }}>답변</TableCell>
+              )}
+              <TableCell style={{ width: isMobile ? '40%' : '32%', fontWeight: 'bold', textAlign: 'center', fontSize: '80%' }} align="center">제목</TableCell>
+              <TableCell style={{ width: isMobile ? '8%' : '8%', fontWeight: 'bold', fontSize: '80%' }}>작성자</TableCell>
+              {!isMobile && (
+                <TableCell style={{ width: '8%', fontWeight: 'bold', fontSize: '80%' }}>작성일</TableCell>
+              )}
+              <TableCell style={{ width: isMobile ? '8%' : '8%', fontWeight: 'bold', fontSize: '80%', textAlign: 'center', }}><SettingsIcon/></TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -161,16 +166,25 @@ export default function ProductQnA({ posts, reloadQnAData }) {
               <React.Fragment key={index}>
                 <TableRow onClick={() => handlePostClick(post, index)} style={{ cursor: 'pointer' }}>
                   <TableCell style={{ fontSize: '80%' }}>{post.typeQnA}</TableCell>
-                  <TableCell style={{ fontWeight: 'bold', fontSize: '80%' }}>
-                    <Typography variant="body2" style={{ fontWeight: 'bold' }}>
-                      {replyStatus[post.bid] ? '답변완료' : '미답변'}
-                    </Typography>
+                  {!isMobile && (
+                    <TableCell style={{ fontWeight: 'bold', fontSize: '80%' }}>
+                      <Typography variant="body2" style={{ fontWeight: 'bold' }}>
+                        {replyStatus[post.bid] ? '답변' : '미답변'}
+                      </Typography>
+                    </TableCell>
+                  )}
+                  <TableCell style={{ fontSize: '80%', verticalAlign: 'middle' }}>
+                    {post.secretMsg === 1 && (
+                      <LockIcon style={{ fontSize: '120%', marginRight: '4px', verticalAlign: 'middle', marginBottom: '5px' }} />
+                    )}
+                    {post.title}
                   </TableCell>
-                  <TableCell style={{ fontSize: '80%' }}>{post.title}</TableCell>
-                  <TableCell style={{ fontSize: '80%' }}>{`${post.email.split('@')[0].substring(0, 4)}${'*'.repeat(post.email.split('@')[0].length - 4)}`}</TableCell>
-                  <TableCell style={{ fontSize: '80%' }}>{new Date(post.regDate).toLocaleDateString().slice(0, -1)}</TableCell>
+                  <TableCell style={{ fontSize: '80%' }}>{`${post.email.split('@')[0]}`}</TableCell>
+                  {!isMobile && (
+                    <TableCell style={{ fontSize: '80%' }}>{new Date(post.regDate).toLocaleDateString().slice(0, -1)}</TableCell>
+                  )}
                   {currentUserEmail === post.email ? 
-                    <TableCell style={{ width: isMobile ? '10%' : '10%', fontWeight: 'bold', fontSize: '80%', textAlign: 'center' }}>
+                  <TableCell style={{ width: isMobile ? '10%' : '10%', fontWeight: 'bold', fontSize: '80%', textAlign: 'center' }}>
                       <IconButton onClick={(event) => handleEditClick(event, post)} aria-label="edit">
                         <EditIcon />
                       </IconButton>
@@ -183,46 +197,51 @@ export default function ProductQnA({ posts, reloadQnAData }) {
                 {expandedPost === index && (
                   <TableRow>
                     <TableCell colSpan={6}>
-                      <Accordion expanded={expandedPost === index}>
-                        <AccordionSummary
-                          expandIcon={<ExpandMoreIcon />}
-                          aria-controls="panel1bh-content"
-                          id="panel1bh-header"
-                        >
-                          <div style={{ display: 'flex', flexDirection: 'column' }}>
-                            <Typography style={{ minHeight: '50px', marginRight: '10px', fontSize: '100%' }}>
-                              {post.content}
-                            </Typography>
-                            {post.img && <ImgModal style={{ width: 100 }} img={post.img} />}
-                          </div>
-                        </AccordionSummary>
-                        <TableContainer>
-                          <Table>
-                            <TableBody>
-                              {Object.values(replies).map((reply, index) => (
-                                <React.Fragment key={index}>
-                                  <TableRow style={{ backgroundColor: '#f5f5f5' }}>
-                                    <TableCell style={{ fontWeight: 'bold', fontSize: '80%' }}>
-                                      답변
-                                    </TableCell>
-                                    <TableCell style={{ fontWeight: 'bold', fontSize: '80%' }}>
-                                      {reply.email.split('@')[0]}
-                                    </TableCell>
-                                    <TableCell style={{ fontWeight: 'bold', fontSize: '80%' }}>
-                                      {new Date(reply.regDate).toLocaleString().replace('T', ' ').slice(0, -3)}
-                                    </TableCell>
-                                  </TableRow>
-                                  <TableRow>
-                                    <TableCell colSpan={3} style={{ padding: '10px' }}>
-                                      {reply.content}
-                                    </TableCell>
-                                  </TableRow>
-                                </React.Fragment>
-                              ))}
-                            </TableBody>
-                          </Table>
-                        </TableContainer>
-                      </Accordion>
+                      {(!post.secretMsg || currentUserEmail === post.email || isAdmin) && (
+                        <Accordion expanded={expandedPost === index}>
+                          <AccordionSummary
+                            expandIcon={<ExpandMoreIcon />}
+                            aria-controls="panel1bh-content"
+                            id="panel1bh-header"
+                          >
+                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                              <Typography style={{ minHeight: '50px', marginRight: '10px', fontSize: '100%' }}>
+                                {post.content}
+                              </Typography>
+                              {post.img && <ImgModal style={{ width: 100 }} img={post.img} />}
+                            </div>
+                          </AccordionSummary>
+                          <TableContainer>
+                            <Table>
+                              <TableBody>
+                                {Object.values(replies).map((reply, index) => (
+                                  <React.Fragment key={index}>
+                                    <TableRow style={{ backgroundColor: '#f5f5f5' }}>
+                                      <TableCell style={{ fontWeight: 'bold', fontSize: '80%' }}>
+                                        답변
+                                      </TableCell>
+                                      <TableCell style={{ fontWeight: 'bold', fontSize: '80%' }}>
+                                        {reply.email.split('@')[0]}
+                                      </TableCell>
+                                      <TableCell style={{ fontWeight: 'bold', fontSize: '80%' }}>
+                                        {new Date(reply.regDate).toLocaleString().replace('T', ' ').slice(0, -3)}
+                                      </TableCell>
+                                    </TableRow>
+                                    <TableRow>
+                                      <TableCell colSpan={3} style={{ padding: '10px' }}>
+                                        {reply.content}
+                                      </TableCell>
+                                    </TableRow>
+                                  </React.Fragment>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </TableContainer>
+                        </Accordion>
+                      )}
+                      {(post.secretMsg && !(currentUserEmail === post.email || isAdmin)) ? (
+                        <div>비밀 게시물입니다. 작성자 또는 관리자만 열람할 수 있습니다.</div>
+                      ) : ''}
                     </TableCell>
                   </TableRow>
                 )}

@@ -1,26 +1,20 @@
-import React, { useState, useEffect, useRef  } from "react";
-import { useParams } from 'react-router-dom';
+import React, { useState, useEffect  } from "react";
+import { useParams, useNavigate } from 'react-router-dom';
 import Grid from '@mui/material/Grid';
 import Button from '@mui/material/Button';
-import Input from '@mui/material/Input';
-import Box from '@mui/material/Box';
-import Select from '@mui/material/Select';
-import MenuItem from '@mui/material/MenuItem';
-import axios from 'axios';
-import { CardContent, CardMedia, Snackbar, Typography } from '@mui/material';
-import CountDown from "../components/CountDown";
-import Rating from "../components/Rating";
-import { useNavigate } from 'react-router-dom';
+import { Snackbar } from '@mui/material';
 import ReviewForm from "../components/ReviewForm";
 import InquiryContent from "../components/InquiryContent";
-import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
-import FavoriteIcon from '@mui/icons-material/Favorite';
 import ProductReviews from "../components/ProductReviews";
 import ProductQnA from "../components/ProductQnA";
 import { selectUserData } from '../api/firebase';
 import { onAuthStateChanged, getAuth } from 'firebase/auth';
-import { Card } from "react-bootstrap";
-
+import ItemDetailInfo from "../components/Item/ItemDetailInfo";
+import ItemInfo from "../components/Item/ItemInfo";
+import { fetchItemWishCounts, handleLikeClickAPI } from "../api/wishApi ";
+import { fetchQnAData, fetchReviewsData } from "../api/boardApi";
+import { fetchItemData } from "../api/itemApi";
+import { addToCart } from "../api/cartApi";
 
 export default function ItemDetail() {
   const { iid } = useParams();
@@ -44,15 +38,17 @@ export default function ItemDetail() {
   const [isAdmin, setIsAdmin] = useState(false);
   const auth = getAuth();
   const [isInquiryModalOpen, setIsInquiryModalOpen] = useState(false);
-  const shareLinkRef = useRef(null);
   const [isSnackbarOpen, setIsSnackbarOpen] = useState(false);
   const [itemWishCount, setItemWishCount] = useState(0);
 
   useEffect(() => {
-    const fetchItemData = async () => {
+    window.scrollTo(0, 0); 
+  }, []); 
+
+  useEffect(() => {
+    const fetchItemDatas = async () => {
       try {
-        const userEmail = currentUserEmail || 'em'; // 로그인한 사용자의 이메일이 없으면 'em'을 사용
-        const response = await axios.get(`/ft/item/detail/${iid}/${userEmail}`);
+        const response = await fetchItemData(iid, currentUserEmail);
         const { item, options, tags, value } = response.data;
         const formattedItem = {
           iid: item.iid,
@@ -67,7 +63,13 @@ export default function ItemDetail() {
           totalSta: item.totalSta,
         };
         setItem(formattedItem);
-  
+
+        const formattedTags = tags ? tags.map(tag => ({
+          itid: tag.itid,
+          tag: tag.tag,
+        })) : [];
+        setTags(formattedTags);
+
         const formattedOptions = options ? options.map(option => ({
           ioid: option.ioid,
           option: option.option,
@@ -76,19 +78,8 @@ export default function ItemDetail() {
           price: option.price, 
         })) : [];
         setOptions(formattedOptions);
-  
-        const formattedTags = tags ? tags.map(tag => ({
-          itid: tag.itid,
-          tag: tag.tag,
-        })) : [];
-        setTags(formattedTags);
-  
-        if (value === 1){
-          setIsWish(true)
-        } else{
-          setIsWish(false)
-        }
-  
+
+        setIsWish(value === 1);
         setIsLoading(false);
       } catch (error) {
         console.error('상품 정보를 불러오는 중 에러:', error);
@@ -96,13 +87,16 @@ export default function ItemDetail() {
       }
     };
   
-    fetchItemData();
+    fetchItemDatas();
   }, [iid, currentUserEmail]);
 
-  const increaseQuantity = (index) => {
+  const increaseQuantity = (index, stock) => {
     const updatedSelectedOptions = [...selectedOptions];
-    updatedSelectedOptions[index].count += 1;
-    setSelectedOptions(updatedSelectedOptions);
+    const currentQuantity = updatedSelectedOptions[index].count;
+    if (currentQuantity < stock) { // 최대값 설정
+      updatedSelectedOptions[index].count += 1;
+      setSelectedOptions(updatedSelectedOptions);
+    }
   };
 
   const decreaseQuantity = (index) => {
@@ -146,21 +140,25 @@ export default function ItemDetail() {
   }, [selectedOptions]);
 
   const handleAddToCart = () => {
-    if (!userInfo || !userInfo.email) {
-      // 사용자가 로그인되어 있지 않은 경우, 로그인 페이지로 리다이렉트
-      window.location.href = '/signIn'; // 로그인 페이지 URL을 실제로 사용하는 주소로 변경해주세요
-      return;
-    }
-    const cartItems = selectedOptions.map(option => ({
+    const cartItem = {
       iid: item.iid,
-      ioid: option.ioid,
-      count: option.count,
-      email: userInfo.email,
-    }));
-    console.log(cartItems);
-    axios.post('/ft/api/carts', cartItems)
+      email: currentUserEmail,
+      optionList: selectedOptions,
+    };
+  
+    addToCart(cartItem)
       .then(response => {
-        console.log('장바구니에 상품이 추가되었습니다.');
+        console.log(response);
+        if (response) {
+          const addToCartConfirmation = window.confirm('장바구니에 상품이 추가되었습니다.\n장바구니로 이동하시겠습니까?');
+          if (addToCartConfirmation) {
+            navigate('/cart');
+          }
+        } else if (selectedOptions.length === 0) {
+          alert('옵션을 선택해주세요.');
+        } else {
+          alert('이미 장바구니에 있습니다.');
+        }
       })
       .catch(error => {
         console.error('장바구니 추가 실패:', error);
@@ -171,7 +169,7 @@ export default function ItemDetail() {
   useEffect(() => {
     const handleScroll = () => {
       const nav = document.querySelector('nav');
-      const navOffsetTop = nav.offsetTop;
+      const navOffsetTop = nav.offsetTop -250;  // 상단 고정되는 시간
 
       if (window.scrollY >= navOffsetTop) {
         setIsNavFixed(true);
@@ -207,23 +205,8 @@ export default function ItemDetail() {
     window.scrollTo({ top: sectionTop, behavior: 'smooth' });
   };
 
-  // 리뷰모달
-  const openModal = () => {
-    if (!userInfo || !userInfo.email) {
-      // 사용자가 로그인되어 있지 않은 경우, 로그인 페이지로 리다이렉트
-      window.location.href = '/signIn'; // 로그인 페이지 URL을 실제로 사용하는 주소로 변경해주세요
-      return;
-    }
-    setIsModalOpen(true);
-  };
-
-  const closeModal = () => {
-    setIsModalOpen(false);
-    reloadReviewData();
-  };
-  // 리뷰 데이터 get
   useEffect(() => {
-    axios.get(`/ft/board/list/review/${iid}`)
+    fetchReviewsData(iid)
       .then(jArr => {
         const reviews = jArr.data;
         if (reviews) {
@@ -268,7 +251,7 @@ export default function ItemDetail() {
 
   // 문의 데이터 get
   useEffect(() => {
-    axios.get(`/ft/board/list/QnA/${iid}`)
+    fetchQnAData(iid)
       .then(jArr => {
         const qnas = jArr.data;
         if (qnas) {
@@ -282,6 +265,7 @@ export default function ItemDetail() {
             regDate: qna.regDate,
             content: qna.content,
             img: qna.img,
+            secretMsg: qna.secretMsg,
           }));
           setQnAs(formattedQnA);
           setQnAsCount(formattedQnA.length);
@@ -301,15 +285,11 @@ export default function ItemDetail() {
   // 찜기능
   const handleLikeClick = () => {
     if (!userInfo || !userInfo.email) {
-      // 사용자가 로그인되어 있지 않은 경우, 로그인 페이지로 리다이렉트
-      window.location.href = '/signIn'; // 로그인 페이지 URL을 실제로 사용하는 주소로 변경해주세요
+      window.location.href = '/signIn';
       return;
     }
   
-    axios.post(`/ft/wish/click`, {
-      iid: iid,
-      email: userInfo.email
-    })
+    handleLikeClickAPI(iid, userInfo.email)
     .then(response => {
       // 서버로부터 응답 받은 데이터를 처리
       const value = response.data;
@@ -320,10 +300,9 @@ export default function ItemDetail() {
         setIsWish(false); // 좋아요 해제
       }
   
-      // 아이템 찜 수를 가져오는 요청
       const fetchItemWishCount = async () => {
         try {
-          const response = await axios.get(`/ft/wish/count/${iid}`);
+          const response = await fetchItemWishCounts(iid);
           const itemWishCount = response.data;
           setItemWishCount(itemWishCount);
         } catch (error) {
@@ -340,7 +319,7 @@ export default function ItemDetail() {
   };
 
   const reloadReviewData = () => {
-    axios.get(`/ft/board/list/review/${iid}`)
+    fetchReviewsData(iid)
       .then(jArr => {
         const reviews = jArr.data;
         if (reviews) {
@@ -368,7 +347,7 @@ export default function ItemDetail() {
       .catch(err => console.log(err))
 
       // 아이템 디테일 데이터 가져오기
-    axios.get(`/ft/item/detail/${iid}/${userInfo.email}`)
+      fetchItemData(iid, userInfo.email)
     .then(response => {
       const { item, options, tags, value } = response.data;
       const formattedItem = {
@@ -413,7 +392,7 @@ export default function ItemDetail() {
   };
 
   const reloadQnAData = () => {
-    axios.get(`/ft/board/list/QnA/${iid}`)
+    fetchQnAData(iid)
     .then(jArr => {
       const qnas = jArr.data;
       if (qnas) {
@@ -428,6 +407,7 @@ export default function ItemDetail() {
           content: qnas.content,
           img: qnas.img,
           sta: qnas.sta,
+          secretMsg: qnas.secretMsg,
         }));
         setQnAs(formattedQnA);
         setQnAsCount(formattedQnA.length);
@@ -485,10 +465,9 @@ export default function ItemDetail() {
   useEffect(() => {
     const fetchItemWishCount = async () => {
       try {
-        const response = await axios.get(`/ft/wish/count/${iid}`);
+        const response = await fetchItemWishCounts(iid);
 
         const itemWishCount = response.data;
-        console.log("Item wish count:", itemWishCount);
         setItemWishCount(itemWishCount);
       } catch (error) {
         console.error('아이템 찜 수를 불러오는 중 에러:', error);
@@ -497,143 +476,83 @@ export default function ItemDetail() {
   
     fetchItemWishCount();
   }, [iid]);
+
+  // =================== order item 관련 ======================
+  const handleOrder = () => {
+    if (!userInfo || !userInfo.email) {
+      // 사용자가 로그인되어 있지 않은 경우, 로그인 페이지로 리다이렉트
+      window.location.href = '/signIn'; 
+      return;
+    }
+  
+    // Ensure that selectedOptions has at least one option selected
+    if (selectedOptions.length === 0) {
+      alert("옵션을 선택해주세요");
+      return;
+    }
+  
+    const orderItems = selectedOptions.map(option => ({
+      iid: item.iid, // db
+      ioid: option.ioid, // db
+      option: option.option, // db
+      name:item.name, // db
+      img:item.img1, // db
+      count: option.count, // db
+      price: item.salePrice && new Date(item.saleDate) > new Date() ? item.salePrice : item.price
+    }));
+  
+    // orderItems를 로컬 스토리지에 저장
+    localStorage.setItem('orderItems', JSON.stringify(orderItems)); //  객체나 배열을 JSON 문자열로 변환
+    console.log(orderItems);
+    // Order 페이지로 이동할 때 orderItems 상태를 함께 전달
+    navigate("/order", { state: { orderItems } });
+  };    
+
+  const nonMembersHandleOrder = () => {
+    // Ensure that selectedOptions has at least one option selected
+    if (selectedOptions.length === 0) {
+      alert("옵션을 선택해주세요");
+      return;
+    }
+  
+    const orderItems = selectedOptions.map(option => ({
+      iid: item.iid, // db
+      ioid: option.ioid, // db
+      option: option.option, // db
+      name:item.name, // db
+      img:item.img1, // db
+      count: option.count, // db
+      price: item.salePrice && new Date(item.saleDate) > new Date() ? item.salePrice : item.price
+    }));
+  
+    // orderItems를 로컬 스토리지에 저장
+    localStorage.setItem('orderItems', JSON.stringify(orderItems)); //  객체나 배열을 JSON 문자열로 변환
+    console.log(orderItems);
+    // Order 페이지로 이동할 때 orderItems 상태를 함께 전달
+    navigate("/order", { state: { orderItems } });
+  };    
+
   return (
     <Grid container spacing={2} className="itemDetail">
-      {/* 왼쪽 여백 */}
-      <Grid item xs={1} md={1} sx={{ placeItems: 'center', display: { xs: 'none',  lg: 'flex' }, }}>
-      </Grid>
-
-      {/* 상품 이미지 카드 */}
-      <Grid item xs={12} md={5} style={{ padding: 50, textAlign: 'center' }}>
-        <Card>
-          {/* 상품 이미지 */}
-          <CardMedia
-            component="img"
-            image={item.img1}
-            alt={item.img1}
-            style={{ height: 380 }}
+      <Grid container spacing={2} className="itemDetail" sx={{ paddingLeft: { xs: 0, md: 10 } }}>
+        {/* 상품 이미지 카드 */}
+        <Grid item xs={12} md={6} style={{ padding: 50, textAlign: 'center' }}>
+          <ItemDetailInfo item={item} tags={tags} navigate={navigate}/>
+        </Grid>
+        {/* 상품 정보 카드 */}
+        <Grid item xs={12} md={5} style={{ padding: 50 }} > 
+          <ItemInfo item={item} options={options} handleOptionChange={handleOptionChange}
+            decreaseQuantity={decreaseQuantity} increaseQuantity={increaseQuantity} removeOption={removeOption} 
+            totalPrice={totalPrice} handleOrder={handleOrder} handleAddToCart={handleAddToCart} 
+            handleCopyLink={handleCopyLink} iswish={iswish} itemWishCount={itemWishCount} 
+            handleLikeClick={handleLikeClick} selectedOptions={selectedOptions} nonMembersHandleOrder={nonMembersHandleOrder}
           />
-          <CardContent>
-            {/* 상품 평점 및 태그 */}
-            <Rating item={item} strSize={22}/>
-            {tags.map((tag, index) => (
-              <span 
-                key={index}
-                style={{ 
-                  cursor: 'pointer',
-                  display: "inline-block", 
-                  borderRadius: "999px",
-                  padding: "2px 8px", 
-                  marginRight: "5px",
-                  fontSize: "0.7rem", 
-                  fontWeight: "bold", 
-                  color: "black", 
-                  backgroundColor: "lightgrey", 
-                  border: "1px solid grey", 
-                }}
-                onClick={() => navigate(`/itemlist/${tag.tag}`)}
-              >
-                #{tag.tag}
-              </span>
-            ))}
-          </CardContent>
-        </Card>
+        </Grid>
       </Grid>
-
-      {/* 오른쪽 여백 */}
-      <Grid item md={1} sx={{ placeItems: 'center', display: { xs: 'none', lg: 'flex' }, }}>
-      </Grid>
-
-      {/* 상품 정보 카드 */}
-      <Grid item xs={12} md={5} style={{ padding: 50 }}>
-        <Card>
-          <CardContent>
-            {/* 상품 이름 및 가격 */}
-            <Typography variant="h5" gutterBottom>
-              {item.name}
-            </Typography>
-            <Typography variant="body1" gutterBottom>
-              <CountDown saleDate={item.saleDate} />
-            </Typography>
-            {/* 가격 정보 */}
-            <div style={{ marginBottom: '10px' }} >
-              {/* 세일 가격 표시 */}
-              <span id="nowPrice" style={item.salePrice && new Date(item.saleDate) > new Date() ? { textDecoration: 'line-through', lineHeight: '1.5', fontSize: 'small' } : {}}>
-                {item.saleDate && new Date(item.saleDate) > new Date() && item.price ? `${item.price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}원` : ''}
-              </span><br/>
-              {/* 현재 가격 표시 */}
-              <span id="currentPrice">{item.saleDate && new Date(item.saleDate) > new Date() ? (item.salePrice ? item.salePrice.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') : '') : (item.price ? item.price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') : '')}</span><span>원</span>
-            </div>
-            {/* 옵션 선택 */}
-            <div style={{ marginBottom: '10px' }}>
-              {/* 옵션 선택 메뉴 */}
-              <Select
-                value=''
-                onChange={handleOptionChange}
-                displayEmpty
-                title="옵션 선택"
-                fullWidth
-                style={{ width: '80%' }}
-                MenuProps={{ PaperProps: { style: { width: 'max-content' } } }}
-              >
-                <MenuItem value='' disabled>옵션 선택</MenuItem>
-                {options.map(option => (
-                  <MenuItem key={option.option} value={option.option} style={{ justifyContent: 'space-between' }}>
-                    <span>{option.option}</span>
-                    <span>{option.stock}개</span>
-                  </MenuItem>
-                ))}
-              </Select>
-              {/* 선택된 옵션 표시 */}
-              {selectedOptions.map((option, index) => (
-                <Box 
-                  key={index} 
-                  display="flex" 
-                  alignItems="center" 
-                  marginBottom={1} 
-                  p={1}
-                  borderRadius={1}
-                  boxShadow={2}
-                  bgcolor="#f5f5f5"
-                  border="1px solid #ccc"
-                  style={{ width: '65%', marginTop: 5, minHeight: 50 }} 
-                >
-                  <Typography variant="body1" style={{ flexGrow: 1 }}>
-                    {option.option}
-                  </Typography>
-                  <Button onClick={() => decreaseQuantity(index)}>-</Button>
-                  <Input
-                    value={option.count}
-                    readOnly
-                    style={{ width: `${(option.count.toString().length + 1) * 10}px`, margin: '0 5px' }} 
-                    disableUnderline 
-                  />
-                  <Button onClick={() => increaseQuantity(index)}>+</Button>
-                  <Button onClick={() => removeOption(index)}>X</Button>
-                </Box>
-              ))}
-            </div>
-            {/* 총 가격 표시 */}
-            <Typography variant="h5" style={{ fontWeight: 'bold' }}>
-              총 가격: {totalPrice.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}원
-            </Typography>
-            {/* 주문 및 장바구니 버튼 */}
-            <Button variant="contained" color="primary" style={{ marginBottom: '10px' }}>주문하기</Button>
-            <Button variant="contained" color="primary" style={{ marginBottom: '10px', marginLeft:5 }} onClick={handleAddToCart}>장바구니</Button>
-            <Button variant="contained" color="primary" style={{ marginBottom: '10px', marginLeft:5, backgroundColor: '#808080' }}>비회원 주문하기</Button>
-            <br/>
-            {/* 공유 및 찜하기 버튼 */}
-            <Button variant="contained" color="primary" style={{ marginBottom: '10px' }} onClick={handleCopyLink}>공유하기</Button>
-            <Button variant="contained" color="primary" style={{ marginBottom: '10px', marginLeft:5, backgroundColor: 'transparent', color: 'black', }} onClick={handleLikeClick}>
-              찜 {iswish ? <FavoriteIcon style={{ color: 'red', width: 18 }} /> : <FavoriteBorderIcon style={{width:18}}/>} {itemWishCount}
-            </Button>
-          </CardContent>
-        </Card>
-      </Grid>
-      <nav style={{ backgroundColor: '#f8f9fa', boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)', padding: '10px 0', textAlign: 'center', width: '100%', position: isNavFixed ? 'sticky' : 'relative', top: isNavFixed ? 0 : 'auto', left: 0, zIndex: 1000 }}>
+      <nav style={{ backgroundColor: '#f8f9fa', boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)', padding: '10px 0', textAlign: 'center', width: '100%', position: isNavFixed ? 'sticky' : 'relative', top: isNavFixed ? 120 : 'auto', left: 0, zIndex: 1000 }}>
         <ul style={{ display: 'flex', justifyContent: 'center', listStyleType: 'none', padding: 0 }}>
           {['detail', 'review', 'qna'].map((id) => (
-            <li key={id} style={{ margin: '0 20px' }}>
+            <li key={id} style={{ margin: '0 3.5%' }}>
               <button onClick={() => handleSectionClick(id)} style={{ backgroundColor: 'transparent', border: 'none', cursor: 'pointer', fontWeight: 'bold', padding: '12px 16px', borderRadius: '8px', fontSize: 'calc(14px + 0.5vw)', letterSpacing: '1px', textTransform: 'uppercase', transition: 'color 0.3s ease', position: 'relative', margin: '0 10px' }}>
                 <span style={{ position: 'absolute', left: 0, bottom: '-4px', width: '100%', height: '2px', backgroundColor: id === activeSection ? '#000' : 'transparent' }}></span>
                 <span style={{ position: 'relative', zIndex: 1 }}>{id === 'detail' ? <span>상세정보</span> : id === 'review' ? <span >리뷰&후기({reviewsCount})</span> : id === 'qna' ? <span >문의({qnAsCount})</span> : id}</span>
@@ -642,33 +561,31 @@ export default function ItemDetail() {
           ))}
         </ul>
       </nav>
-      <Grid item xs={12} sm={12} md={12} lg={12} xl={12}>
+      <Grid item xs={12} md={12}>
         <section id="detail">
           <Grid container spacing={2} justifyContent="center">
-            <Grid item xs={12} style={{ padding: 50, textAlign: 'center' }}>
+            <Grid item xs={12} sx={{ padding: { xs: 0, md: 5 }, textAlign: 'center' }}>
               <img src={item.img2} alt={item.img2} style={{ width: '90%' }} />
-              <img src={item.img2} alt={item.img2} style={{ width: '90%' }} />
+              <img src={item.img3} alt={item.img3} style={{ width: '90%' }} />
             </Grid>
           </Grid>
         </section>
       </Grid>
-      <Grid item xs={12} sm={12} md={12} lg={12} xl={12} >
+      <Grid item xs={12} md={12}>
         <section id="review">
-          <Grid container spacing={2} justifyContent="center">
-            <Grid item xs={12} style={{ paddingLeft: 100 , paddingRight: 100 }}>
-              <Button variant="contained" color="primary" size="small" style={{ marginRight: 10 }} onClick={() => openModal(iid)}>리뷰작성</Button>
-              <ReviewForm isOpen={isModalOpen} handleClose={closeModal} iid={iid} /> 
-              <ProductReviews reloadReviewData={reloadReviewData} reviews={reviews} item={item}/>
+          <Grid container spacing={2} justifyContent="center" sx={{ paddingLeft: { xs: 2, md: 10 }, paddingRight: { xs: 2, md: 10 } }}>
+            <Grid item xs={12}>
+              <ProductReviews reloadReviewData={reloadReviewData} reviews={reviews} item={item} />
             </Grid>
           </Grid>
         </section>
       </Grid>
-      <Grid item xs={12} sm={12} md={12} lg={12} xl={12}>
+      <Grid item xs={12} md={12}>
         <section id="qna">
-          <Grid container spacing={2} justifyContent="center">
-            <Grid item xs={12} style={{ paddingLeft: 100 , paddingRight: 100  }}>
+          <Grid container spacing={2} justifyContent="center" sx={{ paddingLeft: { xs: 2, md: 10 }, paddingRight: { xs: 2, md: 10 } }}>
+            <Grid item xs={12} >
               <ProductQnA posts={qnAs} reloadQnAData={reloadQnAData}/>
-              <Button variant="contained" style={{ marginBottom: '20px', backgroundColor: '#808080' }} onClick={() => openInquiryModal(iid)}>문의하기</Button>
+              <Button variant="contained" style={{ marginBottom: '20px', backgroundColor: '#808080', position:'relative', top:'-50px'}} onClick={() => openInquiryModal(iid)}>문의하기</Button>
               <InquiryContent isOpen={isInquiryModalOpen} handleClose={closeInquiryModal} iid={iid}/>
             </Grid>
           </Grid>

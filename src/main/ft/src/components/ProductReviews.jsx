@@ -2,47 +2,13 @@ import React, { useEffect, useState } from 'react';
 import Stack from '@mui/material/Stack';
 import Divider from '@mui/material/Divider';
 import Pagination from '@mui/material/Pagination';
-import { Grid } from '@mui/material';
 import StarRatings from './StarRating';
-import axios from 'axios';
 import Rating from './Rating';
 import ImgModal from './ImgModal';
 import ReviewEditModal from './ReviewEditModal'; // 추가: 리뷰 수정 모달
 import { selectUserData } from '../api/firebase';
 import { onAuthStateChanged, getAuth } from 'firebase/auth';
-
-// CSS
-const styles = {
-  container: {
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    height: '100vh', // Adjust height as needed
-  },
-  productReviews: {
-    width: '80%', // Adjust width as needed
-  },
-  imageReviews: {
-    whiteSpace: 'nowrap',
-  },
-  imageReview: {
-    display: 'inline-block',
-    marginRight: '3%', // 이미지 사이의 간격 조정
-  },
-  review: {
-    display: 'flex',
-    alignItems: 'center',
-    marginRight: '1%', // 리뷰 사이의 간격 조정
-  },
-  thumb: {
-    cursor: 'pointer',
-    marginRight: '0.5%', // 따봉 아이콘과 텍스트 사이의 간격 조정
-  },
-  bar: {
-    borderRadius: '20px', // 막대 그래프 모양을 둥글게 조정
-    height: '2%', // 막대 그래프 두께 조정
-  },
-};
+import { Button, MenuItem, Select } from '@mui/material';
 
 // 리뷰 작성 폼 컴포넌트
 const ReviewForm = () => {
@@ -60,7 +26,7 @@ const RatingOption = ({ option, count, maxCount, increaseCommentCount }) => {
   return (
     <div style={{ marginBottom: '1%', width: '100%', marginRight: '1%' }}>
       <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-        <div style={{ width: '20%', marginRight: '1%' }}>{option}</div>
+        <div style={{ width: '10%', }}>{option}</div>
         <div style={{ width: '100%', position: 'relative', height: '30px', backgroundColor: 'lightgray', borderRadius: '20px' }}>
           <div style={{ position: 'absolute', width: `${barWidth}%`, height: '100%', backgroundColor: 'gray', borderRadius: '20px' }}></div>
         </div>
@@ -75,7 +41,7 @@ const RatingOptions = ({ commentCounts, increaseCommentCount }) => {
   return (
     <div className="bar-chart" style={{ width: '100%' }}>
       {[5, 4, 3, 2, 1].map((rating, index) => (
-        <div style={{ display: 'flex', alignItems: 'center', width: '100%' }} key={index}>
+        <div style={{ display: 'flex', alignItems: 'center', width: '150%' }} key={index}>
           <RatingOption
             option={`${rating}점`}
             count={commentCounts[rating]}
@@ -170,7 +136,6 @@ const ProductReviews = ({ reviews, item, reloadReviewData }) => {
   const filteredReviews = selectedRating
     ? sortedReviews.filter(review => review.sta === selectedRating)
     : sortedReviews;
-
   const indexOfLastReview = currentPage * reviewsPerPage;
   const indexOfFirstReview = indexOfLastReview - reviewsPerPage;
   const currentReviews = filteredReviews.slice(indexOfFirstReview, indexOfLastReview);
@@ -202,7 +167,7 @@ const ProductReviews = ({ reviews, item, reloadReviewData }) => {
   return (
     <div className="product-reviews" style={{ width: '100%' }}>
       <Stack direction="row" spacing={1} alignItems="center">
-        <div className="left-panel" style={{ width: '20%' }}>
+        <div className="left-panel" style={{ width: '25%' }}>
           <h2>Review</h2>
           <Rating item={item} strSize={22} />
           <ReviewForm />
@@ -222,27 +187,31 @@ const ProductReviews = ({ reviews, item, reloadReviewData }) => {
       <div className="bottom-panel" style={{ width: '100%' }}>
         <div className="sort-options" style={{ width: '100%' }}>
           {/* 정렬 옵션 선택 */}
-          <select onChange={handleSortChange} style={{ width: 100 }}>
-            <option value="latest">최신순</option>
-            <option value="highest">별점 높은 순</option>
-            <option value="lowest">별점 낮은 순</option>
-            <option value="img">사진</option>
-          </select>
+          <Select
+            value={sortBy}
+            onChange={handleSortChange}
+            style={{ width: 100 }}
+          >
+            <MenuItem value="latest">최신순</MenuItem>
+            <MenuItem value="highest">별점 높은 순</MenuItem>
+            <MenuItem value="lowest">별점 낮은 순</MenuItem>
+            <MenuItem value="img">사진</MenuItem>
+          </Select>
         </div>
       </div>
 
       {/* 리뷰 목록 */}
       <div className="reviews" style={{ width: '100%' }}>
         {currentReviews.map(review => (
-          <div style={reviewCardStyle}>
+          <div key={review.vid} style={reviewCardStyle}>
             {/* 리뷰 내용 */}
             <div>
               <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1%' }}>
-                <p style={{ marginRight: '1%' }}>{`${review.email.split('@')[0].substring(0, 4)}${'*'.repeat(review.email.split('@')[0].length - 4)}`}</p>
+                <p style={{ marginRight: '1%' }}>{`${review.email.split('@')[0]}`}</p>
                 <p style={{ color: 'rgba(0, 0, 0, 0.5)', fontSize: '12px' }}>{new Date(review.regDate).toLocaleDateString().slice(0, -1)}</p>
                 {/* 수정 버튼 */}
                 {currentUserEmail === review.email ?
-                  <button onClick={() => handleEditReview(review, item)} style={{ marginLeft: 'auto' }}>수정</button>
+                  <Button onClick={() => handleEditReview(review, item)} style={{ marginLeft: 'auto', backgroundColor:'gray', color:'white', }}>수정</Button>
                   : ""}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1%' }}>

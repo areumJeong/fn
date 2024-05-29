@@ -1,21 +1,26 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, createUserWithEmailAndPassword, GoogleAuthProvider,
   signInWithPopup, signOut, updateProfile, signInWithEmailAndPassword,
-  onAuthStateChanged, signInWithRedirect, OAuthProvider, deleteUser    } from "firebase/auth";
-import { v4 as uuid } from 'uuid';
-import axios from 'axios';
-import {getDatabase, ref, set, get, remove, update } from "firebase/database";
-
-const firebaseConfig = {
+  onAuthStateChanged, sendPasswordResetEmail, OAuthProvider, deleteUser, 
+  sendEmailVerification, RecaptchaVerifier, signInWithPhoneNumber, updatePassword } from "firebase/auth";
+  import {getDatabase, ref, set, get, remove, update } from "firebase/database";
+  
+  
+  const firebaseConfig = {
   apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
   authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
   projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
-  databaseURL: process.env.REACT_APP_FIREBASE_DATABASE_URL
+  databaseURL: process.env.REACT_APP_FIREBASE_DATABASE_URL,
+  storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKE,
+  messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.REACT_APP_FIREBASE_APP_ID
 };
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth();
 const database = getDatabase(app);
+
+export { auth, updatePassword, signInWithEmailAndPassword  };
 
 /*========================= login =========================*/
 export function login({ email, password }) {
@@ -95,11 +100,19 @@ export function logout() {
 // --------------------- #login 끝 ----------------------
 
 /*========================= # Authentication =========================*/
-export function authRegister({ email, password, name, addr, detailAddr, 
-  tel, req, def, isAdmin}) { //  사용처에서 obj로 처리하기에 그것에 맞춰서 제공 
+export function authRegister({ email, password, name, postCode, addr, detailAddr, 
+  tel, req}) { //  사용처에서 obj로 처리하기에 그것에 맞춰서 제공 
   console.log('firebase:register():', email, password);
-  createUserWithEmailAndPassword(auth, email, password) 
-
+  createUserWithEmailAndPassword(auth, email, password)
+  
+  .then(() => {
+    sendEmailVerification(auth.currentUser) // 인증 이메일 발송
+  .then(() => {
+    // Email verification sent!
+    // ...
+  });
+  })
+  
     // user 등록하기
     .then(() => {
       console.log("User created in Firebase Authentication");
@@ -107,21 +120,23 @@ export function authRegister({ email, password, name, addr, detailAddr,
         email: email,
         password:password,
         name: name,
+        postCode:postCode,
         addr: addr,
         detailAddr: detailAddr,
         tel: tel,
-        req: req,
-        def: def,
-        isAdmin: isAdmin
+        req: req,       
       })
-      console.log("User profile  updated");
+      console.log("User profile updated");
     })
+    
     .then(() => {
-      insertUserData(email, password, name, addr, detailAddr, tel, 
-        req, def, isAdmin );
+      insertUserData(email, password, name, postCode, addr, detailAddr, tel, 
+        req);
         console.log("User added to Database");
+        console.log("auth.currentUser-------" + auth.currentUser);
     })
     .then(() => {logout()})
+    
 
     .catch((error) => {
       // Firebase Authentication에 사용자 생성 중 오류 발생한 경우
@@ -135,7 +150,7 @@ export function authRegister({ email, password, name, addr, detailAddr,
       }
 
       alert(errorMessage); // 오류 메시지 출력
-      throw error; // 오류 다시 던지기
+      window.location.replace("/signUp")
     });
 }
 
@@ -165,11 +180,25 @@ export function authRemoveUser() {
   });
 }
 
+// 받은 이메일로 비번 바꾸기 기능 
+export function changePassword (email) {
+  sendPasswordResetEmail(auth, email) // 비밀번호 재설정 이메일 보내기
+  .then(() => {
+    // Password reset email sent!
+    // ..
+  })
+  .catch((error) => {
+    const errorCode = error.code;
+    const errorMessage = error.message;
+    // ..
+  });
+}
+
 /*========================= # Authentication 끝=========================*/
 
 /*========================= DAO =========================*/
-function insertUserData(email, password, name, addr, detailAddr, 
-  tel, req, def, isAdmin) {
+function insertUserData(email, password, name, postCode, addr, detailAddr, 
+  tel, req) {
   if (!email) {
     console.error("이메일이 유효하지 않습니다.");
     return;
@@ -180,14 +209,15 @@ function insertUserData(email, password, name, addr, detailAddr,
     email: email,
     password: password,
     name: name,
+    postCode:postCode,
     addr: addr,
     detailAddr: detailAddr,
     tel: tel,
     req: req,
-    def: def,
-    isAdmin: isAdmin
   }).then(() => {
     console.log("사용자 정보가 성공적으로 저장되었습니다.");
+    alert('회원가입이 완료되었습니다.')
+    window.location.reload();
   }).catch((error) => {
     console.error("사용자 정보 저장 중 오류가 발생했습니다:", error);
   });
@@ -201,20 +231,17 @@ function insertUserDataWithSocial(email, displayName) {
     email: email,
     name: displayName,
     password:'N/A', 
+    postCode:'',
     addr: '',
     detailAddr: '',
     tel: '',
     req: '',
-    def: 0,
-    isAdmin: 0
   }).then(() => {
     console.log("사용자 정보가 성공적으로 저장되었습니다.");
   }).catch((error) => {
     console.error("사용자 정보 저장 중 오류가 발생했습니다:", error);
   });
 }
-
-// email이 undefined
 
 export async function selectUserData(email) {
 
@@ -228,7 +255,6 @@ export async function selectUserData(email) {
   return get(ref(database, `users/${sanitizedEmail}`))
     .then(snapshot => {
       if (snapshot.exists()) {
-        console.log(snapshot.val());
         return snapshot.val();
       } 
       return null;
@@ -239,8 +265,55 @@ export async function selectUserData(email) {
     });
 }
 
+export async function selectUserEmailPassword(email) {
+  try {
+    if (!email) {
+      throw new Error("이메일이 유효하지 않습니다.");
+    }
+
+    const sanitizedEmail = email.replace(/[.#$[\]]/g, ''); // 특수 문자를 제거한 이메일
+
+    const snapshot = await get(ref(database, `users/${sanitizedEmail}`));
+
+    if (snapshot.exists()) {
+      const { email, password } = snapshot.val();
+      const result = { email, password };
+      console.log(result);
+      return result;
+    } else {
+      console.error("사용자 정보가 존재하지 않습니다.");
+      return null;
+    }
+  } catch (error) {
+    console.error("사용자 정보를 가져오는 중 오류가 발생했습니다:", error);
+    return null;
+  }
+}
+
+export async function changePasswordFromDB(email, newPassword) {
+  try {
+    // 이메일이 정의되어 있지 않다면 오류를 발생시킵니다.
+    if (!email) {
+      throw new Error('이메일이 없습니다.');
+    }
+
+    // 이메일에서 특수 문자를 제거하여 정제합니다.
+    const sanitizedEmail = email.replace(/[.#$[\]]/g, '');
+
+    // 데이터베이스에서 해당 이메일을 가진 사용자의 정보를 업데이트합니다.
+    await update(ref(database, `users/${sanitizedEmail}`), {
+      password: newPassword // 새로운 비밀번호로 업데이트합니다.
+    });
+
+    console.log('사용자의 비밀번호가 업데이트되었습니다.');
+  } catch (error) {
+    console.error('비밀번호 업데이트 중 오류가 발생했습니다:', error);
+  }
+}
+
+// update
 export async function updateUserData(user) {
-  const { email, password, name, addr, detailAddr, tel, req } = user;
+  const { email, password, name, postCode, addr, detailAddr, tel, req } = user;
   try {
     // email이 정의되어 있을 때만 업데이트를 시도합니다.
     if (email) {
@@ -248,6 +321,7 @@ export async function updateUserData(user) {
       await update(ref(database, `users/${sanitizedEmail}`), {
         name,
         password,
+        postCode,
         addr,
         detailAddr,
         tel,
@@ -259,7 +333,6 @@ export async function updateUserData(user) {
     }
   } catch (error) {
     console.error('사용자 정보 업데이트 중 오류:', error);
-    throw error; // 오류를 다시 던져서 호출하는 쪽에서 처리할 수 있도록 합니다.
   }
 }
 
@@ -292,7 +365,6 @@ export function onUserStateChanged(callback) {
 
   return unsubscribe; // unsubscribe 함수 반환
 }
-
 
 // ====================
 
