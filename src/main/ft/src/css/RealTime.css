@@ -1,0 +1,21 @@
+.slide-enter {
+  opacity: 0;
+  transform: translateY(0%); /* 드롭다운 창이 나타날 때의 초기 위치 */
+}
+
+.slide-enter-active {
+  opacity: 1;
+  transform: translateY(0%);
+  transition: opacity 300ms ease, transform 300ms ease;
+}
+
+.slide-exit {
+  opacity: 1;
+  transform: translateY(0%);
+}
+
+.slide-exit-active {
+  opacity: 0;
+  transform: translateY(-100%); /* 화면 위로 이동하도록 수정 */
+  transition: opacity 300ms ease, transform 300ms ease;
+}

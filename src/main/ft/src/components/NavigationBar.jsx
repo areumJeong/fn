@@ -440,9 +440,9 @@ export default function NavigationBar() {
                   />
                 </Search>
               </form>
-
-              <RealTime/>
-            
+              <div>
+                <RealTime/>
+              </div>
             </Stack>
 
            
