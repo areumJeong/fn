@@ -84,12 +84,15 @@ public class CartServiceV2Impl implements CartServiceV2{
     @Override
     public int updateCartItem(CartItemRequestDto requestDto) {
         int stockCount = cartDaoV2.findCountByItem(requestDto.getIid(), requestDto.getIoid()).getCount();
-        System.out.println(stockCount);
-        System.out.println(requestDto.getCount());
         if (stockCount < requestDto.getCount()) {
             return 0;
         }
         int result = cartDaoV2.updateCartItem(requestDto.getEmail(), requestDto.getCid(), requestDto.getCount());
         return result;
     }
+
+	@Override
+	public void deletePaymentAllCartItme(int oid) {
+		cartDaoV2.deletePaymentAllCartItme(oid);
+	}
 }

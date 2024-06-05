@@ -43,7 +43,6 @@ public class BoardController {
 	
 	@GetMapping("/list/{type}/{iid}")
 	public JSONArray list(@PathVariable String type, @PathVariable int iid) {
-		
 		JSONArray jArr = new JSONArray();
 		if (type.equals("review")) {
 			List<Board> list = reviewService.getReviewList(type, iid);
@@ -108,11 +107,10 @@ public class BoardController {
 	
 	@PostMapping("/update")
 	public String boardUpdate(@RequestBody Board boardData) {
-		String img = (boardData.getImg().equals("") || boardData.getImg() == null)? boardService.getBoardByBid(boardData.getBid()).getImg() : boardData.getImg();
 		Board board = Board.builder().bid(boardData.getBid())
 		  		.iid(boardData.getIid()).email(boardData.getEmail()).type(boardData.getType())
 		  		.typeQnA(boardData.getTypeQnA()).title(boardData.getTitle())
-		  		.content(boardData.getContent()).img(img).build();
+		  		.content(boardData.getContent()).img(boardData.getImg()).secretMsg(boardData.getSecretMsg()).build();
 		boardService.updateBoard(board);
 		if (boardData.getType().equals("review")) {
 			Review review = Review.builder()

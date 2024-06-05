@@ -13,6 +13,7 @@ import com.example.ft.entity.Order;
 import com.example.ft.entity.OrderHistory;
 import com.example.ft.entity.OrderItem;
 import com.example.ft.entity.OrderRequest;
+import com.example.ft.service.ItemService;
 import com.example.ft.service.OrderService;
 
 import lombok.RequiredArgsConstructor;
@@ -21,7 +22,7 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/order")
 @RequiredArgsConstructor
 public class OrderController {
-
+	private final ItemService itemService;
 	private final OrderService orderService;
 
 	// 주문 1개 가져오기
@@ -92,20 +93,6 @@ public class OrderController {
 		}
 	}
 
-	// 주문 삭제
-//	@PostMapping("/delete")
-//	public ResponseEntity<String> deleteOrder(@RequestParam int oid) {
-//		try {
-//			// 주문 서비스를 호출하여 주문을 삭제
-//			orderService.deleteOrder(oid);
-//			// 주문이 성공적으로 삭제되었음을 클라이언트에게 알림
-//			return ResponseEntity.ok("주문이 성공적으로 삭제되었습니다.");
-//		} catch (Exception e) {
-//			// 주문 삭제에 실패한 경우, 에러 메시지와 함께 500 Internal Server Error 응답 반환
-//			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("주문 삭제에 실패했습니다.");
-//		}
-//	}
-
 	// 특정 사용자의 주문 목록 가져오기
 	@PostMapping("/historyList")
 	public ResponseEntity<?> getOrderListByEmail(@RequestBody Map<String, String> data) { // 이메일 json으로 받음. 그래서 map
@@ -128,7 +115,7 @@ public class OrderController {
 	// admin으로 모든 사용자의 주문 목록 가져오기
 	@PostMapping("/admin/historyList")
 	public ResponseEntity<?> getOrderListForAdmin(@RequestBody Map<String, String> data) {
-
+		
 		String adminEmail = data.get("email"); // adminEmail이라는 key를 통해 admin의 이메일을 받음
 
 		if (!adminEmail.equals("admin@gmail.com")) {
@@ -150,6 +137,7 @@ public class OrderController {
 	public String statusUpdate(@RequestBody Order order) {
 		String status = (order.getStatus().equals("배송완료") ? "배송완료" : "배송중");
 		Order orderData = Order.builder().status(status).oid(order.getOid()).build();
+		orderService.statusUpdate(orderData);
 		return "update";
 	}
 
@@ -166,7 +154,6 @@ public class OrderController {
         try {
             // 주문 정보 업데이트
             orderService.orderWayUpdate(oid, way);
-            System.out.println("송장번호 업데이트");
             return ResponseEntity.ok("운송장 번호가 업데이트되었습니다.");
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("운송장 번호 업데이트에 실패했습니다.");
@@ -180,7 +167,12 @@ public class OrderController {
         try {
             // 주문 정보 업데이트
             orderService.deleteOrder(oid);
-            System.out.println("주문 취소");
+            
+            List<OrderItem> orderItemList = orderService.getOrderItems(oid);
+            for (OrderItem item : orderItemList) {
+            	itemService.inventoryCalculationCancel(item.getIoid(), item.getCount());
+            }
+            
             return ResponseEntity.ok("주문 취소 되었습니다.");
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("주문 취소에 실패했습니다.");
