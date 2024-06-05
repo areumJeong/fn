@@ -1,9 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { loadPaymentWidget } from "@tosspayments/payment-widget-sdk";
-import { Button, Card, CardContent, Grid, Typography } from "@mui/material";
-import axios from "axios";
-import { Stack } from "react-bootstrap";
+import { Button, Card, CardContent, Grid } from "@mui/material";
+import { orderInsert } from "../../api/orderApi";
 
 const widgetClientKey = process.env.REACT_APP_WIDGET_CLIENT_KEY;
 const customerKey = process.env.REACT_APP_CUSTOMER_KEY;
@@ -14,14 +13,14 @@ export function CheckoutPage() {
   const [price, setPrice] = useState(0); 
   const location = useLocation();
   const { orderData } = location.state || {};
- console.log(orderData.order.orderId);
+  
   useEffect(() => {
     const fetchPaymentWidget = async () => {
       try {
         const loadedWidget = await loadPaymentWidget(widgetClientKey, customerKey);
         setPaymentWidget(loadedWidget);
       } catch (error) {
-        console.error("Error fetching payment widget:", error);
+        console.log("Error fetching payment widget:", error);
       }
     };
 
@@ -64,8 +63,7 @@ export function CheckoutPage() {
   const handlePaymentRequest = async () => {
     try {
         // 주문 정보를 서버에 전송하고 응답을 받음
-        const response = await axios.post('/ft/order/insert', orderData);
-        console.log(response);
+        const response = await orderInsert(orderData);
         
         // 주문 정보를 이용하여 결제 요청을 보냄
         await paymentWidget?.requestPayment({
@@ -80,12 +78,12 @@ export function CheckoutPage() {
         
         // 결제 성공 후 /success 페이지로 이동, orderData도 함께 전달
     } catch (error) {
-        console.error("Error requesting payment:", error);
+        console.log("Error requesting payment:", error);
         
         // 에러 처리
         if (error.message.includes("SDKBridgeError")) {
             // Bridge 연결이 끊어졌을 때의 처리
-            console.error("Bridge 연결이 끊겼습니다.");
+            console.log("Bridge 연결이 끊겼습니다.");
             // 적절한 에러 메시지 표시 또는 사용자에게 안내
         } else {
             // 기타 일반적인 에러 처리

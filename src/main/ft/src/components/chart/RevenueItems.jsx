@@ -38,7 +38,7 @@ const RevenueItems = () => {
         const response = await axios.get("/ft/admin/sales/revenue");
         setTop5RevenueItems(response.data);
       } catch (error) {
-        console.error("순이익 Top 5 상품 조회 중 오류:", error);
+        console.log("순이익 Top 5 상품 조회 중 오류:", error);
       }
     };
 
@@ -73,6 +73,7 @@ const RevenueItems = () => {
 
   const options = {
     plugins: {
+      labels: ['1','2','3','4','5'],
       datalabels: {
         color: "black",
         anchor: "end",
@@ -93,11 +94,9 @@ const RevenueItems = () => {
           minRotation: 0, // 레이블 최소 회전 각도
           autoSkip: true, // 레이블 자동 스킵 여부
           maxTicksLimit: 10, // 최대 표시할 레이블 수
-          callback: function (value) {
-            if (value.length > 10) {
-              return value.substring(0, 10) + '...'; // 일정 길이 이상인 경우 자르고 줄임표 추가
-            }
-            return value;
+          callback: function (index) {
+            const label = index + 1; // 레이블 값 가져오기
+            return label;
           },
         },
       },
@@ -108,7 +107,8 @@ const RevenueItems = () => {
     elements: {
       bar: {
         backgroundColor: "rgba(153, 102, 255, 1)", // 바의 배경 색상을 보라색으로 설정
-        borderColor: "rgba(153, 102, 255, 1)" // 바의 테두리 색상을 보라색으로 설정
+        borderColor: "rgba(153, 102, 255, 1)", // 바의 테두리 색상을 보라색으로 설정
+        
       }
     },
     onClick: handleItemClick
@@ -116,8 +116,8 @@ const RevenueItems = () => {
 
   return (
     <Box>
-      <Typography variant="h5" mt={5} mb={5}>순이익 Top 5 상품</Typography>
-      <Bar data={chartData} options={options} height={300}  />
+      <Typography variant="h5" mt={5} mb={1}>순이익 Top 5 상품</Typography>
+      <Bar data={chartData} options={options} height={300} width={330} />
     </Box>
   );
 };

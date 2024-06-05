@@ -9,7 +9,6 @@ export default function ScrollToTop() {
     });
   };
 
-  
   const scrollToBottom = () => {
     window.scrollTo({
       top: document.documentElement.scrollHeight,
@@ -17,12 +16,8 @@ export default function ScrollToTop() {
     });
   };
 
-
-
-
-  
   return (
-    <div>
+    <div >
       <IoIosArrowDropup
         onClick={scrollToTop}
         style={{
@@ -31,7 +26,8 @@ export default function ScrollToTop() {
           right: '10px',
           fontSize: '35px',
           color: 'rgba(0, 0, 0, 0.5)', // 연한 색상 (검정색의 50% 투명도)
-          cursor: 'pointer'
+          cursor: 'pointer',
+          zIndex: 999,
         }}
       />
       <IoIosArrowDropdown
@@ -42,9 +38,13 @@ export default function ScrollToTop() {
           right: '10px',
           fontSize: '35px',
           color: 'rgba(0, 0, 0, 0.5)', // 연한 색상 (검정색의 50% 투명도)
-          cursor: 'pointer'
+          cursor: 'pointer',
+          zIndex: 999,
         }}
       />
     </div>
   );
 }
+
+
+

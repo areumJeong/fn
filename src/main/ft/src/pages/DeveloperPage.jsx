@@ -53,12 +53,15 @@ const DeveloperPage = () => {
       imgUrl: '/img/circle02.png' },
     { id: 3, 
       name: '정아름', 
-      description: '휴먼양아치 지구망해라', 
-      oneLine: '',
+      description: '후기, 회원 주문, footer, ERD, 통계(상품 분석), 실시간 검색어', 
+      oneLine: 'React를 사용하면서 타 언어보다 효과적이게 작업 할 수 있다는 걸 알게 됐습니다. ' +
+                '이걸 계기로 리액트 공부에 더 집중할 수 있도록 하겠습니다. ' +
+                '그리고 검색 활용을 많이 해야 되는 걸 느꼈습니다. ' +
+                '코드 에러가 나면 무엇 때문인지 찾는 게 재밌고 전보다 많은 공부를 하게 됐습니다.',
       imgUrl: '/img/circle03.png' },
     { id: 4, 
       name: '박성민', 
-      description:  '주문, Firebase를 이용한 유저, 소셜로그인 기능과 RealtimeDB, Karlo, cloudinary, CoolSMS api', 
+      description:  '주문, Firebase를 이용한 유저, 소셜로그인 기능과 RealtimeDB, Karlo, CoolSMS api', 
       oneLine: '개발 중 복잡한 문제를 쪼개어 해결한 후 통합하는 방식이 더 효율적임을 깨달았습니다. ' +
                 '또한 파이어베이스를 공부하며 새로운 기술을 빠르게 습득하는 역량과 검색 및 자료 활용 능력이 ' +
                 '개발자에게 중요하다는 것을 깨달았습니다.',

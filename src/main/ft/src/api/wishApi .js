@@ -4,13 +4,11 @@ import axios from 'axios';
 // Wish List를 가져오는 Axios 요청을 수행하는 함수
 export const fetchWishList = async (userInfo) => {
   try {
-    console.log(userInfo.email);
     const response = await axios.post('/ft/wish/list', { email: userInfo.email }); // 이메일 데이터 보내기
     const wishList = response.data;
-    console.log("Wish List:", wishList);
     return wishList;
   } catch (error) {
-    console.error('Error fetching wish list:', error);
+    console.log('Error fetching wish list:', error);
     throw error;
   }
 };
@@ -33,7 +31,7 @@ export const fetchItemWishCounts = async (iid) => {
     const response = await axios.get(`/ft/wish/count/${iid}`);
     return response;
   } catch (error) {
-    console.error('아이템 찜 수를 불러오는 중 에러:', error);
+    console.log('아이템 찜 수를 불러오는 중 에러:', error);
     throw error;
   }
 };
