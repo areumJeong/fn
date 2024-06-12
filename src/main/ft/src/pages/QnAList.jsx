@@ -11,6 +11,8 @@ import { adminQnAList } from '../api/boardApi';
 import { fetchReplies, postReply, updateReply, deleteReply } from '../api/replyApi';
 import { QueryClient, QueryClientProvider, useQuery } from 'react-query';
 
+
+
 const queryClient = new QueryClient();
 
 export default function QnAList() {
