@@ -12,7 +12,6 @@ import { fetchReplies, postReply, updateReply, deleteReply } from '../api/replyA
 import { QueryClient, QueryClientProvider, useQuery } from 'react-query';
 
 
-
 const queryClient = new QueryClient();
 
 export default function QnAList() {
@@ -40,6 +39,7 @@ function QnAListContent() {
   const [editReplyId, setEditReplyId] = useState(null); 
   const [editReply, setEditReply] = useState(null); 
   const [loading, setLoading] = useState(true); 
+
 
   useEffect(() => {
     onAuthStateChanged(auth, (user) => {
