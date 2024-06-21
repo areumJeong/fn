@@ -22,6 +22,7 @@ export default function QnAList() {
   );
 }
 
+
 function QnAListContent() {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedType, setSelectedType] = useState("전체");
@@ -102,6 +103,7 @@ function QnAListContent() {
     }
   };
 
+  
   const fetchRepliesAndItemInfo = async (post) => {
     try {
       if (post && post.bid) { // 유효한 객체 및 bid인지 확인
