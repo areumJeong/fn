@@ -23,6 +23,7 @@ export default function QnAList() {
 }
 
 
+
 function QnAListContent() {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedType, setSelectedType] = useState("전체");
